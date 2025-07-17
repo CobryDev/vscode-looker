@@ -11,7 +11,7 @@ import {
 export function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("Welcome good Looker!");
 
-  let looker = new LookerServices();
+  let looker = new LookerServices(context);
   let lookml = new LookML();
 
   // Prepare auto-completion.

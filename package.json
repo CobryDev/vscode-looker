@@ -69,7 +69,6 @@
         "@types/mocha": "^2.2.42"
     },
     "dependencies": {
-        "glob": "^10.3.10",
-        "keytar": "^7.9.0"
+        "glob": "^10.3.10"
     }
 }
