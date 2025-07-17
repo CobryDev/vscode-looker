@@ -22,11 +22,29 @@
 			"name": "comment.line.number-sign.lkml",
 			"match": "#.*"
 		},
+		"liquid_variables": {
+			"name": "meta.embedded.liquid.lookml",
+			"captures": {
+				"1": {
+					"name": "punctuation.definition.template-expression.begin.lkml"
+				},
+				"2": {
+					"name": "support.variable.liquid.lookml"
+				},
+				"3": {
+					"name": "punctuation.definition.template-expression.end.lkml"
+				}
+			},
+			"match": "(\\{\\{)(.*?)(\\}\\})"
+		},
 		"strings": {
 			"name": "string.quoted.double.lkml",
 			"begin": "\"",
 			"end": "\"",
 			"patterns": [
+				{
+					"include": "#liquid_variables"
+				},
 				{
 					"name": "constant.character.escape.lkml",
 					"match": "\\\\."
@@ -61,12 +79,12 @@
 		},
 		"parameter_keywords": {
 			"name": "keyword.other.lookml",
-			"match": "\\b(type|label|description|sql|sql_on|primary_key|hidden|timeframes|drill_fields|value_format|value_format_name|html|link|sql_table_name|indexes|type|map_layer_name):",
-			"comment": "Common parameter keywords, identified by the trailing colon."
+			"match": "\\b(type|label|group_label|group_item_label|description|sql|sql_on|primary_key|hidden|timeframes|drill_fields|value_format|value_format_name|html|link|url|icon_url|sql_table_name|indexes|map_layer_name|sql_latitude|sql_longitude):",
+			"comment": "Common parameter keywords, including nested ones, identified by the trailing colon."
 		},
 		"lookml_values": {
 			"name": "support.constant.lookml",
-			"match": "\\b(yes|no|string|number|time|count|average|sum|count_distinct)\\b",
+			"match": "\\b(yes|no|string|number|time|location|count|average|sum|count_distinct)\\b",
 			"comment": "Common predefined values for parameters like 'type' or 'hidden'."
 		},
 		"sql_block": {

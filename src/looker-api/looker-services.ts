@@ -1,141 +1,131 @@
-import * as vscode from 'vscode';
-import { Keytar } from '../utils/keytar';
+import * as vscode from "vscode";
 
 // TODO: Move constants to package.json.
 
-
 export interface LookerApiCredentials {
-    lookerId: String;
-    lookerSecret: String;
-    lookerServerUrl: String;
-    lookerServerPort: String;
+  lookerId: String;
+  lookerSecret: String;
+  lookerServerUrl: String;
+  lookerServerPort: String;
 }
 
 export enum LookerCredentialKeys {
-    serviceKey = 'Looker',
-    accountKey = 'Id',
-    secretKey = 'Secret',
-    lookerUrlKey = 'Looker Server URL',
-    lookerServerPortKey = 'Looker Server Port'
+  serviceKey = "Looker",
+  accountKey = "Id",
+  secretKey = "Secret",
+  lookerUrlKey = "Looker Server URL",
+  lookerServerPortKey = "Looker Server Port",
 }
 
 export class LookerServices {
+  private apiCredentials: LookerApiCredentials;
+  private secrets: vscode.SecretStorage;
 
-    private apiCredentials: LookerApiCredentials;
+  public constructor(context: vscode.ExtensionContext) {
+    this.apiCredentials = {
+      lookerId: "",
+      lookerSecret: "",
+      lookerServerUrl: "",
+      lookerServerPort: "",
+    };
+    this.secrets = context.secrets;
+  }
 
-    public constructor() {
-        this.apiCredentials = {
-            'lookerId': '',
-            'lookerSecret': '',
-            'lookerServerUrl': '',
-            'lookerServerPort': ''
-        };
+  private async storeCredential(
+    credentialType: string,
+    credential: String
+  ): Promise<{ success: string }> {
+    try {
+      await this.secrets.store(credentialType, credential.toString());
+      return { success: `Looker ${credentialType} stored successfully.` };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw { error: `Could not store ${credentialType}: ${errorMessage}` };
     }
+  }
 
-    private storeCredentials(credentialType: string, credential: String) {
-        return new Promise(async function(resolve, reject) {
-            let keytar = Keytar.tryCreate();
-            if (keytar) {
-                await keytar.setPassword(LookerCredentialKeys.serviceKey, credentialType, credential.toString());
-                if (credential) {
-                    resolve({'success': `Looker ${credentialType} stored succesfully.`});
-                } else {
-                    reject({'error': `Could not store ${credentialType}`});
-                }
-            } else {
-                reject({'error': 'Keytar not found.  Unable to securely manage API credentials.'});
-            }
-        });		
+  public async saveApiCredentials(
+    apiCredentials: LookerApiCredentials
+  ): Promise<{ success: string }> {
+    try {
+      // Store all credentials
+      await this.storeCredential(
+        LookerCredentialKeys.accountKey,
+        apiCredentials.lookerId
+      );
+      await this.storeCredential(
+        LookerCredentialKeys.secretKey,
+        apiCredentials.lookerSecret
+      );
+      await this.storeCredential(
+        LookerCredentialKeys.lookerUrlKey,
+        apiCredentials.lookerServerUrl
+      );
+      await this.storeCredential(
+        LookerCredentialKeys.lookerServerPortKey,
+        apiCredentials.lookerServerPort
+      );
+
+      // Retrieve and verify credentials were stored
+      const retrievedCredentials = await this.getLookerAPICredentials();
+      if (retrievedCredentials) {
+        this.apiCredentials = retrievedCredentials;
+        return { success: "Credentials saved and retrieved" };
+      } else {
+        throw { error: "Unable to retrieve API credentials" };
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw { error: errorMessage || "Failed to save credentials" };
     }
+  }
 
-    public saveApiCredentials(apiCredentials: LookerApiCredentials) {
-        return new Promise(async (resolve, reject) => {
-            await this.storeCredentials(LookerCredentialKeys.accountKey, apiCredentials.lookerId)
-            .then((value: any) => {
-                if (!value['success']) {
-                    reject(value['success']);
-                }
-            }).catch((reason) => {
-                reject(reason['error']);
-            });
-            await this.storeCredentials(LookerCredentialKeys.secretKey, apiCredentials.lookerSecret)
-            .then((value: any) => {
-                if (!value['success']) {
-                    reject(value['success']);
-                }
-            }).catch((reason) => {
-                reject(reason['error']);
-            });
-            await this.storeCredentials(LookerCredentialKeys.lookerUrlKey, apiCredentials.lookerServerUrl)
-            .then((value: any) => {
-                if (!value['success']) {
-                    reject(value['success']);
-                }
-            }).catch((reason) => {
-                reject(reason['error']);
-            });
-            await this.storeCredentials(LookerCredentialKeys.lookerServerPortKey, apiCredentials.lookerServerPort)
-            .then((value: any) => {
-                if (!value['success']) {
-                    reject(value['success']);
-                }
-            }).catch((reason) => {
-                reject(reason['error']);
-            });
+  public async getLookerAPICredentials(): Promise<LookerApiCredentials> {
+    try {
+      const apiCredentials: LookerApiCredentials = {
+        lookerId: "",
+        lookerSecret: "",
+        lookerServerUrl: "",
+        lookerServerPort: "",
+      };
 
+      // Retrieve all credentials
+      const lookerId = await this.secrets.get(LookerCredentialKeys.accountKey);
+      const lookerSecret = await this.secrets.get(
+        LookerCredentialKeys.secretKey
+      );
+      const lookerServerUrl = await this.secrets.get(
+        LookerCredentialKeys.lookerUrlKey
+      );
+      const lookerServerPort = await this.secrets.get(
+        LookerCredentialKeys.lookerServerPortKey
+      );
 
-            this.getLookerAPICredentials().then((apiCredentials) => {
-                if (apiCredentials) {
-                    this.apiCredentials = apiCredentials;
-                    resolve({'success': 'Credentials saved and retrieved'});
-                } else {
-                    reject({'error': 'Unable to retrieve API credentials'});
-                }
-            }).catch((reason) => {
-                reject(reason['error']);
-            });
-        });
+      if (!lookerId) {
+        throw { error: "Unable to retrieve Looker API ID." };
+      }
+      if (!lookerSecret) {
+        throw { error: "Unable to retrieve Looker API Secret." };
+      }
+      if (!lookerServerUrl) {
+        throw { error: "Unable to retrieve Looker Server URL." };
+      }
+      if (!lookerServerPort) {
+        throw { error: "Unable to retrieve Looker Server Port." };
+      }
+
+      apiCredentials.lookerId = lookerId;
+      apiCredentials.lookerSecret = lookerSecret;
+      apiCredentials.lookerServerUrl = lookerServerUrl;
+      apiCredentials.lookerServerPort = lookerServerPort;
+
+      return apiCredentials;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw { error: errorMessage || "Failed to retrieve credentials" };
     }
-    
-    public getLookerAPICredentials() {
-        return new Promise<LookerApiCredentials>(async function(resolve, reject) {
-            let keytar = Keytar.tryCreate();
-
-            const apiCredentials: LookerApiCredentials = {
-                'lookerId': '',
-                'lookerSecret': '',
-                'lookerServerUrl': '',
-                'lookerServerPort': ''
-            };
-
-            if (keytar){
-                await keytar.getPassword(LookerCredentialKeys.serviceKey, LookerCredentialKeys.accountKey).then((result) => {
-                    apiCredentials.lookerId = result || '';
-                    if (apiCredentials.lookerId === '') {
-                        reject({'error': `Unable to retrieve `});
-                    }
-                });
-                await keytar.getPassword(LookerCredentialKeys.serviceKey, LookerCredentialKeys.secretKey).then((result) => {
-                    apiCredentials.lookerSecret = result || '';
-                    if (apiCredentials.lookerSecret === '') {
-                        reject({'error': 'Unable to retrieve Looker API Secret.'});
-                    }
-                });
-                await keytar.getPassword(LookerCredentialKeys.serviceKey, LookerCredentialKeys.lookerUrlKey).then((result) => {
-                    apiCredentials.lookerServerUrl = result || '';
-                    if (apiCredentials.lookerServerUrl === '') {
-                        reject({'error': 'Unable to retrieve Looker API Secret.'});
-                    }
-                });
-                await keytar.getPassword(LookerCredentialKeys.serviceKey, LookerCredentialKeys.lookerServerPortKey).then((result) => {
-                    apiCredentials.lookerServerPort = result || '';
-                    if (apiCredentials.lookerServerPort === '') {
-                        reject({'error': 'Unable to retrieve Looker API Secret.'});
-                    }
-                });
-                resolve(apiCredentials);
-            }
-        });
-    }
+  }
 }
-
