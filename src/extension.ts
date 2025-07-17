@@ -15,15 +15,15 @@ export function activate(context: vscode.ExtensionContext) {
   let lookml = new LookML();
 
   // Prepare auto-completion.
-  lookml
-    .parseWorkspaceLookmlFiles(vscode.workspace.rootPath || "")
-    .then((result) => {
-      // TODO: Add view name
-      // TODO: Line number.
-      // TODO: Add fields to intellisense.
-      // TODO: Peek / Goto
-      // TODO: Check result.
-    });
+  const workspaceRoot =
+    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then((result) => {
+    // TODO: Add view name
+    // TODO: Line number.
+    // TODO: Add fields to intellisense.
+    // TODO: Peek / Goto
+    // TODO: Check result.
+  });
 
   // Retrieve API credentials, if stored.
   looker
