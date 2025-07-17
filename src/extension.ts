@@ -15,8 +15,11 @@ export function activate(context: vscode.ExtensionContext) {
   let lookml = new LookML();
 
   // Prepare auto-completion.
+  const workspaceFolders = vscode.workspace.workspaceFolders;
   const workspaceRoot =
-    vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || "";
+    workspaceFolders && workspaceFolders.length > 0
+      ? workspaceFolders[0].uri.fsPath
+      : "";
   lookml.parseWorkspaceLookmlFiles(workspaceRoot).then((result) => {
     // TODO: Add view name
     // TODO: Line number.
