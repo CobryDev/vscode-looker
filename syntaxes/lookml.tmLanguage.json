@@ -20,9 +20,9 @@
 			"captures": {
 				"0": {
 					"patterns": [
-						{ 
+						{
 							"name": "keyword.control.test0",
-							"match": "dimension"
+							"match": "dimension_group|dimension"
 						}
 					]
 				},
@@ -35,9 +35,10 @@
 					"patterns": []
 				}
 			},
-			"patterns": [{
-				"name": "variable.parameter.lookml",
-				"match": "\\b(intervals|timeframes|action|drill_fields|tags|alias|alpha_sort|description|group_label|group_item_label|hidden|label|label_from_parameter|order_by_field|style|view_label|can_filter|case_sensitive|filters|skip_drill_filter|allowed_value|bypass_suggest_restrictions|full_suggestions|suggest_dimension|suggest_explore|suggest_persist_for|suggestable|suggestions|approximate|approximate_threshold|convert_tz|datatype|fanout_on|precision|primary_key|required_access_grants|sql_distinct_key|case|default_value|direction|end_location_field|html|list_field|percentile|sql|sql_end|sql_latitude|sql_longitude|sql_start|start_location_field|tiers|type|units|value_format|value_format_name|allow_fill|map_layer_name|decimals|format)\\b"
+			"patterns": [
+				{
+					"name": "variable.parameter.lookml",
+					"match": "\\b(intervals|timeframes|action|drill_fields|tags|alias|alpha_sort|description|group_label|group_item_label|hidden|label|label_from_parameter|order_by_field|style|view_label|can_filter|case_sensitive|filters|skip_drill_filter|allowed_value|bypass_suggest_restrictions|full_suggestions|suggest_dimension|suggest_explore|suggest_persist_for|suggestable|suggestions|approximate|approximate_threshold|convert_tz|datatype|fanout_on|precision|primary_key|required_access_grants|sql_distinct_key|case|default_value|direction|end_location_field|html|list_field|percentile|sql|sql_end|sql_latitude|sql_longitude|sql_start|start_location_field|tiers|type|units|value_format|value_format_name|allow_fill|map_layer_name|decimals|format)\\b"
 				},
 				{
 					"include": "#sql"
@@ -62,30 +63,38 @@
 		"variables": {
 			"name": "support.variable",
 			"match": "\\${.*?}",
-			"patterns": [{
-				"name": "constant.character.escape.lookml",
-				"match": "\\\\."
-			}]
+			"patterns": [
+				{
+					"name": "constant.character.escape.lookml",
+					"match": "\\\\."
+				}
+			]
 		},
 		"lookml-fields": {
 			"contentName": "support.variable",
 			"begin": "\\b(dimension|measure):",
 			"end": "{",
-			"patterns": [{
-				"name": "constant.character.escape.lookml",
-				"match": "\\\\."
-			}]
+			"patterns": [
+				{
+					"name": "constant.character.escape.lookml",
+					"match": "\\\\."
+				}
+			]
 		},
-		"types" : {
+		"types": {
 			"name": "support.type",
 			"match": "\\b(yesno|yes|no|epoch|timestamp|datetime|date|yyyymmdd|feet|kilometers|meters|miles|nautical_miles|yards|classic|interval|integer|relational|number|string|count|average)\\b",
-			"patterns": [{}]
+			"patterns": [
+				{}
+			]
 		},
 		"comment-line": {
 			"name": "comment.line.block",
 			"begin": "(//|#)",
 			"end": "\n",
-			"patterns": [{}]
+			"patterns": [
+				{}
+			]
 		},
 		"strings": {
 			"name": "string.quoted.double.lookml",
@@ -136,10 +145,12 @@
 			"end": "}\\n",
 			"beginCaptures": {
 				"0": {
-					"patterns": [{
-						"match": "derived_table",
-						"name": "keyword.control.lookml"
-					}]
+					"patterns": [
+						{
+							"match": "derived_table",
+							"name": "keyword.control.lookml"
+						}
+					]
 				}
 			},
 			"patterns": [
@@ -175,7 +186,7 @@
 			"name": "test",
 			"begin": "(link:).*?\\{",
 			"end": "}\\n",
-			"patterns": []			
+			"patterns": []
 		}
 	},
 	"scopeName": "source.lkml"
