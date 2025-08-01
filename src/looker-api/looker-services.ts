@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import fetch, { RequestInit } from "node-fetch";
+import { URLSearchParams } from "url";
 
 // TODO: Move constants to package.json.
 
@@ -7,6 +9,51 @@ export interface LookerApiCredentials {
   lookerSecret: String;
   lookerServerUrl: String;
   lookerServerPort: String;
+}
+
+export interface LookerAuthToken {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  expires_at?: number; // Calculated field for expiry time
+}
+
+export interface LookerApiResponse<T = any> {
+  data?: T;
+  error?: string;
+  status: number;
+}
+
+export interface SqlQueryRequest {
+  sql: string;
+  limit?: number;
+  apply_formatting?: boolean;
+  apply_vis?: boolean;
+  cache?: boolean;
+  image_width?: number;
+  image_height?: number;
+  generate_drill_links?: boolean;
+  force_production?: boolean;
+  cache_only?: boolean;
+  path_prefix?: string;
+  rebuild_pdts?: boolean;
+  server_table_calcs?: boolean;
+}
+
+export interface ProjectValidationResult {
+  project: string;
+  errors?: Array<{
+    message: string;
+    file_path?: string;
+    line_number?: number;
+    severity?: string;
+  }>;
+  warnings?: Array<{
+    message: string;
+    file_path?: string;
+    line_number?: number;
+    severity?: string;
+  }>;
 }
 
 export enum LookerCredentialKeys {
@@ -41,7 +88,7 @@ export class LookerServices {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      throw { error: `Could not store ${credentialType}: ${errorMessage}` };
+      throw new Error(`Could not store ${credentialType}: ${errorMessage}`);
     }
   }
 
@@ -73,12 +120,12 @@ export class LookerServices {
         this.apiCredentials = retrievedCredentials;
         return { success: "Credentials saved and retrieved" };
       } else {
-        throw { error: "Unable to retrieve API credentials" };
+        throw new Error("Unable to retrieve API credentials");
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      throw { error: errorMessage || "Failed to save credentials" };
+      throw new Error(errorMessage || "Failed to save credentials");
     }
   }
 
@@ -104,16 +151,16 @@ export class LookerServices {
       );
 
       if (!lookerId) {
-        throw { error: "Unable to retrieve Looker API ID." };
+        throw new Error("Unable to retrieve Looker API ID.");
       }
       if (!lookerSecret) {
-        throw { error: "Unable to retrieve Looker API Secret." };
+        throw new Error("Unable to retrieve Looker API Secret.");
       }
       if (!lookerServerUrl) {
-        throw { error: "Unable to retrieve Looker Server URL." };
+        throw new Error("Unable to retrieve Looker Server URL.");
       }
       if (!lookerServerPort) {
-        throw { error: "Unable to retrieve Looker Server Port." };
+        throw new Error("Unable to retrieve Looker Server Port.");
       }
 
       apiCredentials.lookerId = lookerId;
@@ -125,7 +172,218 @@ export class LookerServices {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      throw { error: errorMessage || "Failed to retrieve credentials" };
+      throw new Error(errorMessage || "Failed to retrieve credentials");
     }
+  }
+
+  /**
+   * Create an API client instance using the stored credentials
+   */
+  public async createApiClient(): Promise<LookerApiClient> {
+    const credentials = await this.getLookerAPICredentials();
+    return new LookerApiClient(credentials);
+  }
+}
+
+export class LookerApiClient {
+  private credentials: LookerApiCredentials;
+  private authToken: LookerAuthToken | null = null;
+  private baseUrl: string;
+
+  constructor(credentials: LookerApiCredentials) {
+    this.credentials = credentials;
+    this.baseUrl = `${credentials.lookerServerUrl}:${credentials.lookerServerPort}/api/4.0`;
+  }
+
+  private async authenticate(): Promise<LookerAuthToken> {
+    const authUrl = `${this.baseUrl}/login`;
+    const authData = {
+      client_id: this.credentials.lookerId.toString(),
+      client_secret: this.credentials.lookerSecret.toString(),
+    };
+
+    try {
+      const response = await fetch(authUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(authData),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Authentication failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const tokenData = (await response.json()) as LookerAuthToken;
+
+      // Calculate expiry time
+      tokenData.expires_at = Date.now() + tokenData.expires_in * 1000;
+
+      this.authToken = tokenData;
+      return tokenData;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to authenticate with Looker API: ${errorMessage}`
+      );
+    }
+  }
+
+  private async ensureValidToken(): Promise<string> {
+    // Check if we have a valid token
+    if (
+      !this.authToken ||
+      !this.authToken.expires_at ||
+      Date.now() >= this.authToken.expires_at - 30000
+    ) {
+      // Token is missing or expires within 30 seconds, refresh it
+      await this.authenticate();
+    }
+
+    if (!this.authToken) {
+      throw new Error("Failed to obtain authentication token");
+    }
+
+    return `${this.authToken.token_type} ${this.authToken.access_token}`;
+  }
+
+  private async makeRequest<T = any>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<LookerApiResponse<T>> {
+    try {
+      const authHeader = await this.ensureValidToken();
+      const url = `${this.baseUrl}${endpoint}`;
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          ...options.headers,
+        },
+      });
+
+      const responseData = (await response.json()) as any;
+
+      if (!response.ok) {
+        return {
+          error:
+            responseData.message ||
+            `HTTP ${response.status}: ${response.statusText}`,
+          status: response.status,
+        };
+      }
+
+      return {
+        data: responseData as T,
+        status: response.status,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        error: `Request failed: ${errorMessage}`,
+        status: 0,
+      };
+    }
+  }
+
+  /**
+   * Execute a SQL query against the Looker API
+   */
+  public async runSqlQuery(
+    queryRequest: SqlQueryRequest
+  ): Promise<LookerApiResponse<any[]>> {
+    const queryParams = new URLSearchParams();
+
+    // Add query parameters
+    Object.entries(queryRequest).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    return this.makeRequest(`/sql_queries/run/json?${queryParams.toString()}`, {
+      method: "POST",
+    });
+  }
+
+  /**
+   * Validate a LookML project
+   */
+  public async validateProject(
+    projectId: string
+  ): Promise<LookerApiResponse<ProjectValidationResult>> {
+    return this.makeRequest(`/projects/${projectId}/validate`, {
+      method: "POST",
+    });
+  }
+
+  /**
+   * Get all projects accessible to the current user
+   */
+  public async getProjects(): Promise<LookerApiResponse<any[]>> {
+    return this.makeRequest("/projects");
+  }
+
+  /**
+   * Get project information by ID
+   */
+  public async getProject(projectId: string): Promise<LookerApiResponse<any>> {
+    return this.makeRequest(`/projects/${projectId}`);
+  }
+
+  /**
+   * Get all models in a project
+   */
+  public async getProjectModels(
+    projectId: string
+  ): Promise<LookerApiResponse<any[]>> {
+    return this.makeRequest(`/projects/${projectId}/models`);
+  }
+
+  /**
+   * Get model information
+   */
+  public async getModel(modelName: string): Promise<LookerApiResponse<any>> {
+    return this.makeRequest(`/lookml_models/${modelName}`);
+  }
+
+  /**
+   * Test the connection to Looker API
+   */
+  public async testConnection(): Promise<LookerApiResponse<any>> {
+    return this.makeRequest("/user");
+  }
+
+  /**
+   * Logout and invalidate the current token
+   */
+  public async logout(): Promise<void> {
+    if (this.authToken) {
+      try {
+        await this.makeRequest("/logout", { method: "DELETE" });
+      } catch {
+        // Ignore logout errors as token will expire anyway
+      } finally {
+        this.authToken = null;
+      }
+    }
+  }
+
+  /**
+   * Get current authentication status
+   */
+  public isAuthenticated(): boolean {
+    return (
+      this.authToken !== null &&
+      this.authToken.expires_at !== undefined &&
+      Date.now() < this.authToken.expires_at - 30000
+    );
   }
 }
