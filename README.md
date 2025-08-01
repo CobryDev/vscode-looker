@@ -1,23 +1,23 @@
 # Looker Visual Studio Code Extension
 
-[![Test Suite](https://github.com/Ladvien/vscode-looker/actions/workflows/test.yml/badge.svg)](https://github.com/Ladvien/vscode-looker/actions/workflows/test.yml)
-[![Integration Tests](https://github.com/Ladvien/vscode-looker/actions/workflows/integration.yml/badge.svg)](https://github.com/Ladvien/vscode-looker/actions/workflows/integration.yml)
+## Overview
 
-## Project State
-
-The project's current state is not useful. The LookML grammar is not working as one would expect.
-
-I stopped working on this project about a year ago. Primarily, due to time. I've many ideas for useful tools, however, the whole project depends on a LookML language grammar, written in [TextMate](https://macromates.com/manual/en/language_grammars), using regex, in a VSCode formatted file. In short, it is _extremely_ tedious and time intensive to get right. So! I'll probably only continue work if many people feel it would be useful and I get a bit of spare time. Or if any regex-TextMate-VSCode masters would like to help define the grammar.
-
-## Development
-
-A Visual Studio Code extension meant to aid in the development of LookML -- [Looker's](https://looker.com/product/business-intelligence) custom markup language.
+A Visual Studio Code extension designed to enhance the development experience for LookML -- [Looker's](https://looker.com/product/business-intelligence) custom markup language for data modeling and business intelligence.
 
 - [What is LookML?](https://docs.looker.com/data-modeling/learning-lookml/what-is-lookml)
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation & Setup](#installation--setup)
+- [Project Status](#project-status)
+- [Development & Testing](#development--testing)
+- [Known Issues](#known-issues)
+- [Changelog](#changelog)
+
 ## Features
 
-### Implemented:
+### Current Features
 
 - Syntax highlighting with embedded SQL
 
@@ -68,7 +68,7 @@ filter: name {
 }
 ```
 
-### Planned
+### Planned Features
 
 - Use of API. For example, running SQL queries directly from Visual Studio Code using [Run SQL Runner Query](https://docs.looker.com/reference/api-and-integration/api-reference/v3.1/sql-query#run_sql_runner_query). SQL can be selected, sent to this endpoint, and the result saved to a temporary folder, where it could be viewed with a tabular data viewer like the VScode [Excel Viewer](https://marketplace.visualstudio.com/items?itemName=GrapeCity.gc-excelviewer) extension.
 - LookML validation (with use of API endpoint [Validate Project](https://docs.looker.com/reference/api-and-integration/api-reference/v3.1/project#validate_project))
@@ -77,7 +77,25 @@ filter: name {
 - Alphabetize `include:` statements.
 - Auto include view files needed.
 
-## Testing & Development
+## Installation & Setup
+
+### Requirements
+
+- Visual Studio Code
+
+### Extension Settings
+
+- None yet
+
+## Project Status
+
+**Note**: This project was originally created by GitHub user [Ladvien](https://github.com/Ladvien). We have now forked this project and are actively working to improve it.
+
+While the original project's LookML grammar implementation faced challenges and was not fully functional, we are committed to enhancing this extension to better serve the LookML development community. The core challenge remains the LookML language grammar implementation, which requires [TextMate](https://macromates.com/manual/en/language_grammars) grammar definition using regex in a VSCode-compatible format.
+
+We welcome contributions from the community, especially from developers with experience in TextMate grammars, regex, and VSCode extension development, to help improve the LookML language support.
+
+## Development & Testing
 
 This project uses Jest for comprehensive testing with snapshot testing capabilities.
 
@@ -121,24 +139,16 @@ GitHub Actions automatically run:
 
 Tests run on multiple Node.js versions (18.x, 20.x, 22.x) to ensure compatibility.
 
-## Requirements
-
-- Visual Studio Code
-
-## Extension Settings
-
-- None yet
-
 ## Known Issues
 
 - None yet
 
-## Release Notes
+## Changelog
 
-### 0.3
+### Version 0.3
 
 - Syntax highlighting with embedded SQL
-- Storing and retrieval of Looker API credentials.
-- Looker API Login.
+- Storing and retrieval of Looker API credentials
+- Looker API Login
 - Parse workspace for field names
-- Completion items for views and their relevant fields.
+- Completion items for views and their relevant fields
