@@ -4,6 +4,21 @@ import tsparser from "@typescript-eslint/parser";
 
 export default [
   js.configs.recommended,
+  // JavaScript config files
+  {
+    files: ["*.js"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: "commonjs",
+      globals: {
+        module: "writable",
+        exports: "writable",
+        require: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+      },
+    },
+  },
   {
     files: ["src/**/*.ts"],
     ignores: ["src/test/**/*.ts"],
