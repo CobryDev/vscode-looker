@@ -58,15 +58,20 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "test": "npm run compile && node ./node_modules/@vscode/test-electron/out/runTest.js"
+        "test": "npm run compile && node ./node_modules/@vscode/test-electron/out/runTest.js",
+        "lint": "eslint src --ext .ts",
+        "lint:fix": "eslint src --ext .ts --fix"
     },
     "devDependencies": {
-        "typescript": "^5.0.0",
-        "@types/vscode": "^1.80.0",
-        "@vscode/test-electron": "^2.3.8",
-        "tslint": "^5.12.1",
+        "@eslint/js": "^9.32.0",
+        "@types/mocha": "^2.2.42",
         "@types/node": "^18.0.0",
-        "@types/mocha": "^2.2.42"
+        "@types/vscode": "^1.80.0",
+        "@typescript-eslint/eslint-plugin": "^8.38.0",
+        "@typescript-eslint/parser": "^8.38.0",
+        "@vscode/test-electron": "^2.3.8",
+        "eslint": "^9.32.0",
+        "typescript": "^5.0.0"
     },
     "dependencies": {
         "glob": "^10.3.10"

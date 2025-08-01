@@ -1,0 +1,32 @@
+{
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "extends": ["eslint:recommended", "@typescript-eslint/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    // Equivalent to TSLint rules
+    "curly": "warn",
+    "no-throw-literal": "warn",
+    "no-unused-expressions": "warn",
+    "no-redeclare": "warn",
+    "eqeqeq": "warn",
+    "semi": ["warn", "always"],
+
+    // TypeScript specific rules
+    "@typescript-eslint/naming-convention": [
+      "warn",
+      {
+        "selector": "class",
+        "format": ["PascalCase"]
+      }
+    ]
+  }
+}

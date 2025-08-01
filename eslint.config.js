@@ -1,0 +1,90 @@
+import js from "@eslint/js";
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsparser from "@typescript-eslint/parser";
+
+export default [
+  js.configs.recommended,
+  {
+    files: ["src/**/*.ts"],
+    ignores: ["src/test/**/*.ts"],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: "module",
+        project: "./tsconfig.json",
+      },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "writable",
+        require: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint,
+    },
+    rules: {
+      // Equivalent to TSLint rules
+      curly: "warn",
+      "no-throw-literal": "warn",
+      "no-unused-expressions": "warn",
+      "no-redeclare": "warn",
+      eqeqeq: "warn",
+      semi: ["warn", "always"],
+
+      // Disable some conflicting rules
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+
+      // TypeScript specific rules
+      "@typescript-eslint/naming-convention": [
+        "warn",
+        {
+          selector: "class",
+          format: ["PascalCase"],
+        },
+      ],
+    },
+  },
+  // Test files configuration
+  {
+    files: ["src/test/**/*.ts"],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: "module",
+        project: "./tsconfig.json",
+      },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "writable",
+        require: "readonly",
+        suite: "readonly",
+        test: "readonly",
+        before: "readonly",
+        after: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint,
+    },
+    rules: {
+      // Test-specific relaxed rules
+      "no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
+];
