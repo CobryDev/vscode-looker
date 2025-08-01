@@ -37,6 +37,137 @@ export class LookML {
   public explores: LookmlExplore[] = [];
 
   public constructor() {}
+
+  /**
+   * Parse LookML content from a string and return the parsed structure
+   * This method is pure and doesn't modify the instance state
+   */
+  public static parseContent(
+    content: string,
+    fileName: string = "test.lkml"
+  ): { views: LookmlView[]; explores: LookmlExplore[] } {
+    const parser = new LookML();
+    const result = parser.parseContentInternal(content, fileName);
+    return result;
+  }
+
+  /**
+   * Parse LookML content and update instance state
+   */
+  public parseAndMergeContent(
+    content: string,
+    fileName: string = "test.lkml"
+  ): void {
+    const result = this.parseContentInternal(content, fileName);
+    this.views.push(...result.views);
+    this.explores.push(...result.explores);
+  }
+
+  /**
+   * Internal method to parse LookML content from a string
+   */
+  private parseContentInternal(
+    content: string,
+    fileName: string
+  ): { views: LookmlView[]; explores: LookmlExplore[] } {
+    const views: LookmlView[] = [];
+    const explores: LookmlExplore[] = [];
+
+    let lines = content.split("\n");
+    var filename = fileName.replace(/^.*[\\\/]/, "");
+    let parentType: LookmlParentType = LookmlParentType.unknown;
+
+    let view: LookmlView = {
+      name: "unknown",
+      fields: [],
+      fileName: "",
+      lineNumber: 0,
+    };
+    let explore: LookmlExplore = {
+      name: "unknown",
+      fields: [],
+      fileName: "",
+      lineNumber: 0,
+    };
+
+    for (var i in lines) {
+      // If commented field, skip it.
+      let line = lines[i].trim();
+      if (line[0] === "#" || (line[0] === "/" && line[1] === "/")) {
+        continue;
+      }
+
+      // Determine if save to explores or views.
+      if (line.includes("view:")) {
+        // Save previous view if it exists
+        if (view.name !== "unknown") {
+          views.push(view);
+        }
+
+        parentType = LookmlParentType.view;
+        view = {
+          name: this.extractName(line),
+          fields: [],
+          fileName: filename,
+          lineNumber: Number(i),
+        };
+        continue;
+      } else if (line.includes("explore:")) {
+        // Save previous explore if it exists
+        if (explore.name !== "unknown") {
+          explores.push(explore);
+        }
+
+        explore = {
+          name: this.extractName(line),
+          fields: [],
+          fileName: filename,
+          lineNumber: Number(i),
+        };
+        parentType = LookmlParentType.explore;
+        continue;
+      }
+      if (
+        line.includes("measure:") ||
+        line.includes("dimension:") ||
+        line.includes("filter:") ||
+        line.includes("parameter:") ||
+        line.includes("join:")
+      ) {
+        let lookmlField: LookmlField = {
+          name: this.extractName(line),
+          type: this.extractType(line),
+          lineNumber: Number(i),
+          viewName: view.name,
+          fileName: filename,
+        };
+        switch (parentType) {
+          case LookmlParentType.explore:
+            explore.fields.push(lookmlField);
+            break;
+          case LookmlParentType.view:
+            view.fields.push(lookmlField);
+            break;
+          case LookmlParentType.unknown:
+            console.log('CRAP! LookmlParentType is "unknown."');
+            break;
+          default:
+            break;
+        }
+      }
+    } // End lines loop
+
+    // Save final view and explore if they exist
+    if (view.name !== "unknown") {
+      views.push(view);
+    }
+    if (explore.name !== "unknown") {
+      explores.push(explore);
+    }
+
+    return { views, explores };
+  }
+
   public parseWorkspaceLookmlFiles(workspacePath: String) {
     return new Promise<void>((resolve, reject) => {
       glob(`${workspacePath}/**/*.view.lkml`)
@@ -77,91 +208,10 @@ export class LookML {
           if (err) {
             throw err;
           }
-          let lines = data.split("\n");
 
-          // TODO: Switch view name
-          // TODO: Use interface objects
-          // TODO: Check for explores and joins.
-          // TODO: Add dimension_groups and subs
-
+          // Use the new parsing method for consistency
           var filename = filePath.replace(/^.*[\\\/]/, "");
-          let parentType: LookmlParentType = LookmlParentType.unknown;
-
-          let view: LookmlView = {
-            name: "unknown",
-            fields: [],
-            fileName: "",
-            lineNumber: 0,
-          };
-          let explore: LookmlExplore = {
-            name: "unknown",
-            fields: [],
-            fileName: "",
-            lineNumber: 0,
-          };
-
-          for (var i in lines) {
-            // If commented field, skip it.
-            let line = lines[i].trim();
-            if (line[0] === "#" || (line[0] === "/" && line[1] === "/")) {
-              continue;
-            }
-
-            // Determine if save to explores or views.
-            if (line.includes("view:")) {
-              parentType = LookmlParentType.view;
-              view = {
-                name: this.extractName(line),
-                fields: [],
-                fileName: filename,
-                lineNumber: Number(i),
-              };
-              continue;
-            } else if (line.includes("explore:")) {
-              explore = {
-                name: this.extractName(line),
-                fields: [],
-                fileName: filename,
-                lineNumber: Number(i),
-              };
-              parentType = LookmlParentType.explore;
-              continue;
-            }
-            if (
-              line.includes("measure:") ||
-              line.includes("dimension:") ||
-              line.includes("filter:") ||
-              line.includes("parameter:") ||
-              line.includes("join:")
-            ) {
-              let lookmlField: LookmlField = {
-                name: this.extractName(line),
-                type: this.extractType(line),
-                lineNumber: Number(i),
-                viewName: view.name,
-                fileName: filename,
-              };
-              switch (parentType) {
-                case LookmlParentType.explore:
-                  explore.fields.push(lookmlField);
-                  break;
-                case LookmlParentType.view:
-                  view.fields.push(lookmlField);
-                  break;
-                case LookmlParentType.unknown:
-                  console.log('CRAP! LookmlParentType is "unknown."');
-                  break;
-                default:
-                  break;
-              }
-            }
-          } // End lines loop
-          if (view.name !== "unknown") {
-            this.views.push(view);
-          }
-          if (explore.name !== "unknown") {
-            this.explores.push(explore);
-          }
+          this.parseAndMergeContent(data, filename);
           resolve();
         })
       );

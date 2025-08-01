@@ -51,7 +51,7 @@ export default [
       ],
     },
   },
-  // Test files configuration
+  // VSCode test files configuration (Mocha)
   {
     files: ["src/test/**/*.ts"],
     languageOptions: {
@@ -70,12 +70,52 @@ export default [
         exports: "writable",
         module: "writable",
         require: "readonly",
-        suite: "readonly",
-        test: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        expect: "readonly",
         before: "readonly",
         after: "readonly",
         beforeEach: "readonly",
         afterEach: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint,
+    },
+    rules: {
+      // Test-specific relaxed rules
+      "no-unused-expressions": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+    },
+  },
+  // Jest test files configuration
+  {
+    files: ["src/**/__tests__/**/*.ts", "**/*.test.ts", "**/*.spec.ts"],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: "module",
+        project: "./tsconfig.json",
+      },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "writable",
+        require: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        jest: "readonly",
       },
     },
     plugins: {

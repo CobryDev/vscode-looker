@@ -1,0 +1,231 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`LookML Parser Comments and Mixed Content Parsing should handle views with comments and skip commented lines 1`] = `
+{
+  "explores": [],
+  "views": [
+    {
+      "fields": [
+        {
+          "fileName": "03-view-with-comments.view.lkml",
+          "lineNumber": 3,
+          "name": "id",
+          "type": "dimension",
+          "viewName": "orders_with_comments",
+        },
+        {
+          "fileName": "03-view-with-comments.view.lkml",
+          "lineNumber": 10,
+          "name": "customer_id",
+          "type": "dimension",
+          "viewName": "orders_with_comments",
+        },
+        {
+          "fileName": "03-view-with-comments.view.lkml",
+          "lineNumber": 16,
+          "name": "order_count",
+          "type": "measure",
+          "viewName": "orders_with_comments",
+        },
+        {
+          "fileName": "03-view-with-comments.view.lkml",
+          "lineNumber": 22,
+          "name": "total_revenue",
+          "type": "measure",
+          "viewName": "orders_with_comments",
+        },
+      ],
+      "fileName": "03-view-with-comments.view.lkml",
+      "lineNumber": 1,
+      "name": "orders_with_comments",
+    },
+  ],
+}
+`;
+
+exports[`LookML Parser Comprehensive Field Type Parsing should parse all different field types correctly 1`] = `
+{
+  "explores": [],
+  "views": [
+    {
+      "fields": [
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 1,
+          "name": "id",
+          "type": "dimension",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 6,
+          "name": "name",
+          "type": "dimension",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 11,
+          "name": "status",
+          "type": "dimension",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 16,
+          "name": "total_count",
+          "type": "measure",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 21,
+          "name": "average_amount",
+          "type": "measure",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 26,
+          "name": "date_filter",
+          "type": "filter",
+          "viewName": "comprehensive_test",
+        },
+        {
+          "fileName": "02-view-with-all-field-types.view.lkml",
+          "lineNumber": 30,
+          "name": "time_period",
+          "type": "parameter",
+          "viewName": "comprehensive_test",
+        },
+      ],
+      "fileName": "02-view-with-all-field-types.view.lkml",
+      "lineNumber": 0,
+      "name": "comprehensive_test",
+    },
+  ],
+}
+`;
+
+exports[`LookML Parser Dimension Groups should handle dimension_group parsing 1`] = `
+{
+  "explores": [],
+  "views": [
+    {
+      "fields": [
+        {
+          "fileName": "06-dimension-groups.view.lkml",
+          "lineNumber": 15,
+          "name": "event_type",
+          "type": "dimension",
+          "viewName": "events",
+        },
+        {
+          "fileName": "06-dimension-groups.view.lkml",
+          "lineNumber": 20,
+          "name": "event_count",
+          "type": "measure",
+          "viewName": "events",
+        },
+      ],
+      "fileName": "06-dimension-groups.view.lkml",
+      "lineNumber": 0,
+      "name": "events",
+    },
+  ],
+}
+`;
+
+exports[`LookML Parser Explore Parsing should parse explores with joins correctly 1`] = `
+{
+  "explores": [
+    {
+      "fields": [
+        {
+          "fileName": "05-explore-with-joins.view.lkml",
+          "lineNumber": 1,
+          "name": "customers",
+          "type": "join",
+          "viewName": "unknown",
+        },
+        {
+          "fileName": "05-explore-with-joins.view.lkml",
+          "lineNumber": 6,
+          "name": "products",
+          "type": "join",
+          "viewName": "unknown",
+        },
+      ],
+      "fileName": "05-explore-with-joins.view.lkml",
+      "lineNumber": 0,
+      "name": "sales_analysis",
+    },
+  ],
+  "views": [],
+}
+`;
+
+exports[`LookML Parser Malformed Content Handling should handle malformed LookML gracefully 1`] = `
+{
+  "explores": [],
+  "views": [
+    {
+      "fields": [
+        {
+          "fileName": "04-malformed-view.view.lkml",
+          "lineNumber": 1,
+          "name": "missing_brace",
+          "type": "dimension",
+          "viewName": "malformed_test",
+        },
+        {
+          "fileName": "04-malformed-view.view.lkml",
+          "lineNumber": 6,
+          "name": "normal_field",
+          "type": "dimension",
+          "viewName": "malformed_test",
+        },
+        {
+          "fileName": "04-malformed-view.view.lkml",
+          "lineNumber": 12,
+          "name": "measure:",
+          "type": "measure",
+          "viewName": "malformed_test",
+        },
+      ],
+      "fileName": "04-malformed-view.view.lkml",
+      "lineNumber": 0,
+      "name": "malformed_test",
+    },
+  ],
+}
+`;
+
+exports[`LookML Parser Simple View Parsing should correctly parse a simple view with a dimension and a measure 1`] = `
+{
+  "explores": [],
+  "views": [
+    {
+      "fields": [
+        {
+          "fileName": "01-simple-view.view.lkml",
+          "lineNumber": 2,
+          "name": "id",
+          "type": "dimension",
+          "viewName": "orders",
+        },
+        {
+          "fileName": "01-simple-view.view.lkml",
+          "lineNumber": 7,
+          "name": "count",
+          "type": "measure",
+          "viewName": "orders",
+        },
+      ],
+      "fileName": "01-simple-view.view.lkml",
+      "lineNumber": 1,
+      "name": "orders",
+    },
+  ],
+}
+`;
