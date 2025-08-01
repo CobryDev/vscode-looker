@@ -4,3 +4,6 @@ node_modules
 *.vsix
 test-lookml
 /data
+
+## AI Stuff
+*repomix*
