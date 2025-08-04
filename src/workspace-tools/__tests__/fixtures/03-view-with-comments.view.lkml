@@ -7,7 +7,7 @@ view: orders_with_comments {
     sql: ${TABLE}.id ;;
   }
 
-  // Customer information
+  # Customer information
   dimension: customer_id {
     type: number
     sql: ${TABLE}.customer_id ;;
@@ -19,7 +19,7 @@ view: orders_with_comments {
     label: "Total Orders"
   }
 
-  // Revenue calculations
+  # Revenue calculations
   measure: total_revenue {
     type: sum
     sql: ${TABLE}.amount ;;
