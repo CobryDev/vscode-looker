@@ -173,95 +173,37 @@ export class LookMLParser {
       };
     };
 
-    // Process dimensions
-    if (viewData.dimension) {
-      for (const [fieldName] of Object.entries(viewData.dimension)) {
-        const position = getFieldPositionData("dimension", fieldName);
-        fields.push({
-          name: fieldName,
-          type: "dimension",
-          viewName,
-          fileName,
-          lineNumber: position.startLine,
-          startLine: position.startLine,
-          startChar: position.startChar,
-          endLine: position.endLine,
-          endChar: position.endChar,
-        });
+    // Generic function to process a field type
+    const processFieldType = (fieldType: string) => {
+      if (viewData[fieldType]) {
+        for (const [fieldName] of Object.entries(viewData[fieldType])) {
+          const position = getFieldPositionData(fieldType, fieldName);
+          fields.push({
+            name: fieldName,
+            type: fieldType,
+            viewName,
+            fileName,
+            lineNumber: position.startLine,
+            startLine: position.startLine,
+            startChar: position.startChar,
+            endLine: position.endLine,
+            endChar: position.endChar,
+          });
+        }
       }
-    }
+    };
 
-    // Process measures
-    if (viewData.measure) {
-      for (const [fieldName] of Object.entries(viewData.measure)) {
-        const position = getFieldPositionData("measure", fieldName);
-        fields.push({
-          name: fieldName,
-          type: "measure",
-          viewName,
-          fileName,
-          lineNumber: position.startLine,
-          startLine: position.startLine,
-          startChar: position.startChar,
-          endLine: position.endLine,
-          endChar: position.endChar,
-        });
-      }
-    }
+    // Array of field types to process
+    const fieldTypes = [
+      "dimension",
+      "measure",
+      "filter",
+      "parameter",
+      "dimension_group",
+    ];
 
-    // Process filters
-    if (viewData.filter) {
-      for (const [fieldName] of Object.entries(viewData.filter)) {
-        const position = getFieldPositionData("filter", fieldName);
-        fields.push({
-          name: fieldName,
-          type: "filter",
-          viewName,
-          fileName,
-          lineNumber: position.startLine,
-          startLine: position.startLine,
-          startChar: position.startChar,
-          endLine: position.endLine,
-          endChar: position.endChar,
-        });
-      }
-    }
-
-    // Process parameters
-    if (viewData.parameter) {
-      for (const [fieldName] of Object.entries(viewData.parameter)) {
-        const position = getFieldPositionData("parameter", fieldName);
-        fields.push({
-          name: fieldName,
-          type: "parameter",
-          viewName,
-          fileName,
-          lineNumber: position.startLine,
-          startLine: position.startLine,
-          startChar: position.startChar,
-          endLine: position.endLine,
-          endChar: position.endChar,
-        });
-      }
-    }
-
-    // Process dimension groups
-    if (viewData.dimension_group) {
-      for (const [fieldName] of Object.entries(viewData.dimension_group)) {
-        const position = getFieldPositionData("dimension_group", fieldName);
-        fields.push({
-          name: fieldName,
-          type: "dimension_group",
-          viewName,
-          fileName,
-          lineNumber: position.startLine,
-          startLine: position.startLine,
-          startChar: position.startChar,
-          endLine: position.endLine,
-          endChar: position.endChar,
-        });
-      }
-    }
+    // Process each field type using the generic function
+    fieldTypes.forEach(processFieldType);
 
     return fields;
   }
