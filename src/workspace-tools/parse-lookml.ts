@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { glob } from "glob";
-import { LookMLParser } from "./lookml-parser";
+import { LookMLParser, ParseResult } from "./lookml-parser";
 
 export interface LookmlField {
   name: String;
@@ -58,20 +58,30 @@ export class LookML {
   public static parseContent(
     content: string,
     fileName: string = "test.lkml"
-  ): { views: LookmlView[]; explores: LookmlExplore[] } {
+  ): ParseResult<{ views: LookmlView[]; explores: LookmlExplore[] }> {
     return LookMLParser.parseContent(content, fileName);
   }
 
   /**
    * Parse LookML content and update instance state
+   * Throws an error if parsing fails
    */
   public parseAndMergeContent(
     content: string,
     fileName: string = "test.lkml"
   ): void {
     const result = LookMLParser.parseContent(content, fileName);
-    this.views.push(...result.views);
-    this.explores.push(...result.explores);
+    if (!result.success) {
+      throw new Error(
+        `Failed to parse LookML file ${fileName}: ${
+          result.error?.message || "Unknown error"
+        }`
+      );
+    }
+    if (result.data) {
+      this.views.push(...result.data.views);
+      this.explores.push(...result.data.explores);
+    }
   }
 
   public parseWorkspaceLookmlFiles(workspacePath: String) {
@@ -97,27 +107,44 @@ export class LookML {
   }
 
   private async findAllFieldNamesInWorkspace(filePaths: string[]) {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       (async () => {
-        for (const filePath of filePaths) {
-          await this.readFile(filePath);
+        try {
+          for (const filePath of filePaths) {
+            await this.readFile(filePath);
+          }
+          resolve();
+        } catch (error) {
+          reject(error);
         }
-        resolve();
       })();
     });
   }
 
   private readFile(filePath: string) {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>((resolve, reject) => {
       fs.readFile(filePath, "utf-8", async (err, data) => {
         if (err) {
-          throw err;
+          reject(new Error(`Failed to read file ${filePath}: ${err.message}`));
+          return;
         }
 
-        // Use the new parsing method for consistency
-        var filename = filePath.replace(/^.*[\\/]/, "");
-        this.parseAndMergeContent(data, filename);
-        resolve();
+        try {
+          // Use the new parsing method for consistency
+          var filename = filePath.replace(/^.*[\\/]/, "");
+          this.parseAndMergeContent(data, filename);
+          resolve();
+        } catch (parseError) {
+          reject(
+            new Error(
+              `Failed to parse file ${filePath}: ${
+                parseError instanceof Error
+                  ? parseError.message
+                  : String(parseError)
+              }`
+            )
+          );
+        }
       });
     });
   }

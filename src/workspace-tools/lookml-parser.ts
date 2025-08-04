@@ -3,6 +3,15 @@ import { LookmlField, LookmlView, LookmlExplore } from "./parse-lookml";
 const lookmlParser = require("lookml-parser");
 
 /**
+ * Result type for parse operations that can succeed or fail
+ */
+export interface ParseResult<T> {
+  success: boolean;
+  data?: T;
+  error?: Error;
+}
+
+/**
  * Pure utility class for parsing LookML content
  * Contains no state and provides only static methods for parsing
  */
@@ -14,7 +23,7 @@ export class LookMLParser {
   public static parseContent(
     content: string,
     fileName: string = "test.lkml"
-  ): { views: LookmlView[]; explores: LookmlExplore[] } {
+  ): ParseResult<{ views: LookmlView[]; explores: LookmlExplore[] }> {
     const filename = fileName.replace(/^.*[\\/]/, "");
 
     try {
@@ -25,11 +34,23 @@ export class LookMLParser {
       const positions = lookmlParser.getPositions(parsed);
 
       // Transform the parsed output to our existing interfaces with position data
-      return LookMLParser.mapParsedToInterfaces(parsed, filename, positions);
+      const data = LookMLParser.mapParsedToInterfaces(
+        parsed,
+        filename,
+        positions
+      );
+
+      return {
+        success: true,
+        data,
+      };
     } catch (error) {
-      console.error(`Error parsing LookML file ${filename}:`, error);
-      // Return empty arrays on parse error
-      return { views: [], explores: [] };
+      const parseError =
+        error instanceof Error ? error : new Error(String(error));
+      return {
+        success: false,
+        error: parseError,
+      };
     }
   }
 

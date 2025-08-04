@@ -20,11 +20,12 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result).toMatchSnapshot();
-      expect(result.views).toHaveLength(1);
-      expect(result.explores).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.views).toHaveLength(1);
+      expect(result.data?.explores).toHaveLength(0);
 
-      const view = result.views[0];
+      const view = result.data!.views[0];
       expect(view.name).toBe("orders");
       expect(view.fields).toHaveLength(2);
 
@@ -51,10 +52,11 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result).toMatchSnapshot();
-      expect(result.views).toHaveLength(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.views).toHaveLength(1);
 
-      const view = result.views[0];
+      const view = result.data!.views[0];
       expect(view.name).toBe("comprehensive_test");
       expect(view.fields.length).toBeGreaterThan(5);
 
@@ -79,10 +81,11 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result).toMatchSnapshot();
-      expect(result.views).toHaveLength(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.views).toHaveLength(1);
 
-      const view = result.views[0];
+      const view = result.data!.views[0];
       expect(view.name).toBe("orders_with_comments");
 
       // Should parse fields correctly despite comments
@@ -106,10 +109,11 @@ describe("LookML Parser", () => {
       );
 
       // Assert - should not throw errors, but may have incomplete parsing
-      expect(result).toMatchSnapshot();
-      expect(result.views).toHaveLength(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.views).toHaveLength(1);
 
-      const view = result.views[0];
+      const view = result.data!.views[0];
       expect(view.name).toBe("malformed_test");
       // Should still parse what it can
       expect(view.fields.length).toBeGreaterThan(0);
@@ -128,11 +132,12 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result).toMatchSnapshot();
-      expect(result.explores).toHaveLength(1);
-      expect(result.views).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.explores).toHaveLength(1);
+      expect(result.data?.views).toHaveLength(0);
 
-      const explore = result.explores[0];
+      const explore = result.data!.explores[0];
       expect(explore.name).toBe("sales_analysis");
 
       // Check for joins
@@ -159,10 +164,11 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result).toMatchSnapshot();
-      expect(result.views).toHaveLength(1);
+      expect(result.success).toBe(true);
+      expect(result.data).toMatchSnapshot();
+      expect(result.data?.views).toHaveLength(1);
 
-      const view = result.views[0];
+      const view = result.data!.views[0];
       expect(view.name).toBe("events");
       expect(view.fields.length).toBeGreaterThan(0);
 
@@ -177,8 +183,9 @@ describe("LookML Parser", () => {
       const result = LookML.parseContent("", "empty.lkml");
 
       // Assert
-      expect(result.views).toHaveLength(0);
-      expect(result.explores).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(result.data?.views).toHaveLength(0);
+      expect(result.data?.explores).toHaveLength(0);
     });
 
     it("should handle content with only comments", () => {
@@ -196,8 +203,9 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      expect(result.views).toHaveLength(0);
-      expect(result.explores).toHaveLength(0);
+      expect(result.success).toBe(true);
+      expect(result.data?.views).toHaveLength(0);
+      expect(result.data?.explores).toHaveLength(0);
     });
 
     it("should handle multiple views in one file", () => {
@@ -220,9 +228,10 @@ describe("LookML Parser", () => {
       const result = LookML.parseContent(multiViewContent, "multi-view.lkml");
 
       // Assert
-      expect(result.views).toHaveLength(2);
-      expect(result.views[0].name).toBe("first_view");
-      expect(result.views[1].name).toBe("second_view");
+      expect(result.success).toBe(true);
+      expect(result.data?.views).toHaveLength(2);
+      expect(result.data!.views[0].name).toBe("first_view");
+      expect(result.data!.views[1].name).toBe("second_view");
     });
   });
 
@@ -256,7 +265,8 @@ describe("LookML Parser", () => {
       );
 
       // Assert
-      const view = result.views[0];
+      expect(result.success).toBe(true);
+      const view = result.data!.views[0];
       const idField = view.fields.find((field) => field.name === "id");
 
       expect(idField).toBeDefined();
@@ -265,6 +275,46 @@ describe("LookML Parser", () => {
       expect(idField!.viewName).toBe("orders");
       expect(idField!.fileName).toBe("01-simple-view.view.lkml");
       expect(typeof idField!.lineNumber).toBe("number");
+    });
+  });
+
+  describe("Error Handling", () => {
+    it("should return error result for truly malformed content", () => {
+      // Arrange
+      const malformedContent = `
+        view: test {
+          dimension: id {
+            type: number
+            invalid_syntax_here!!!
+            [unclosed bracket
+          }
+        }
+        invalid_top_level_syntax!!!
+      `;
+
+      // Act
+      const result = LookML.parseContent(malformedContent, "malformed.lkml");
+
+      // Assert
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBeDefined();
+      expect(result.data).toBeUndefined();
+    });
+
+    it("should propagate errors when using parseAndMergeContent", () => {
+      // Arrange
+      const parser = new LookML();
+      const malformedContent = `
+        view: test {
+          dimension: id {
+            invalid_syntax!!!
+      `;
+
+      // Act & Assert
+      expect(() => {
+        parser.parseAndMergeContent(malformedContent, "malformed.lkml");
+      }).toThrow();
     });
   });
 });
