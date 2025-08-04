@@ -1,10 +1,15 @@
 {
-    "name": "looker",
-    "displayName": "looker",
-    "description": "Tools to aid development of LookML",
-    "version": "0.0.3",
+    "name": "looker-vscode",
+    "displayName": "Looker",
+    "publisher": "Cobry",
+    "description": "A simple extension for LookML development.",
+    "version": "0.0.4",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/CobryDev/vscode-looker.git"
+    },
     "engines": {
-        "vscode": "^1.32.0"
+        "vscode": "^1.80.0"
     },
     "categories": [
         "Other"
