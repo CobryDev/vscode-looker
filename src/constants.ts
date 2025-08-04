@@ -6,9 +6,12 @@
 /**
  * Looker API related constants
  */
+// Get package.json configuration
+const packageJson = require("../package.json");
+
 export const LOOKER_API = {
   /** API version used for all Looker API endpoints */
-  VERSION: "4.0",
+  VERSION: packageJson["vscode-looker"]?.lookerApiVersion || "4.0",
 
   /** API endpoints */
   ENDPOINTS: {

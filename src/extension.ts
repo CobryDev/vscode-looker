@@ -55,7 +55,10 @@ function initializeWorkspace(lookml: LookML): void {
       ? workspaceFolders[0].uri.fsPath
       : "";
 
-  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then(() => {
+  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then((result) => {
+    console.log(
+      `LookML parsing completed: ${result.filesProcessed} files processed, ${result.viewsFound} views found, ${result.exploresFound} explores found`
+    );
     // TODO: Add view name
     // TODO: Line number.
     // TODO: Add fields to intellisense.

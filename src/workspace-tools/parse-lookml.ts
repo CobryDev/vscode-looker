@@ -85,7 +85,11 @@ export class LookML {
   }
 
   public parseWorkspaceLookmlFiles(workspacePath: String) {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<{
+      filesProcessed: number;
+      viewsFound: number;
+      exploresFound: number;
+    }>((resolve, reject) => {
       glob(`${workspacePath}/**/*.view.lkml`)
         .then((files) => {
           this.findAllFieldNamesInWorkspace(files).then(() => {
@@ -97,7 +101,11 @@ export class LookML {
             // 	}
             // 	console.log("File has been created");
             // });
-            resolve(); // TODO: Return number found to let user know if succesful.
+            resolve({
+              filesProcessed: files.length,
+              viewsFound: this.views.length,
+              exploresFound: this.explores.length,
+            });
           });
         })
         .catch((err) => {

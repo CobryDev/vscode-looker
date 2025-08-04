@@ -3,7 +3,7 @@ import fetch, { RequestInit } from "node-fetch";
 import { URLSearchParams } from "url";
 import { LOOKER_API, MESSAGES } from "../constants";
 
-// TODO: Move constants to package.json.
+// TODO: Consider moving additional configurable constants to package.json (completed: API version moved).
 
 export interface LookerApiCredentials {
   lookerId: String;

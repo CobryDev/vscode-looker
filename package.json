@@ -51,6 +51,9 @@
             }
         ]
     },
+    "vscode-looker": {
+        "lookerApiVersion": "4.0"
+    },
     "scripts": {
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",

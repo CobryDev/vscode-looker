@@ -172,8 +172,12 @@ describe("LookML Parser", () => {
       expect(view.name).toBe("events");
       expect(view.fields.length).toBeGreaterThan(0);
 
-      // Note: Current parser doesn't handle dimension_group specifically,
-      // but this test establishes baseline behavior for future improvements
+      // Verify dimension_group is parsed correctly with proper type recognition
+      const dimensionGroupField = view.fields.find(
+        (field) => field.type === "dimension_group"
+      );
+      expect(dimensionGroupField).toBeDefined();
+      expect(dimensionGroupField!.name).toBe("created");
     });
   });
 
