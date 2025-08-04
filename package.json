@@ -11,9 +11,6 @@
         "Other"
     ],
     "main": "./out/extension.js",
-    "activationEvents": [
-        "onLanguage:lookml"
-    ],
     "contributes": {
         "commands": [
             {
