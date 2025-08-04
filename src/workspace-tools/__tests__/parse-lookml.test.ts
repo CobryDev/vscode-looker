@@ -185,7 +185,7 @@ describe("LookML Parser", () => {
       // Arrange
       const commentOnlyContent = `
         # This is a comment
-        // This is another comment
+        # This is another comment
         # Another comment line
       `;
 
