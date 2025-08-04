@@ -1,6 +1,4 @@
 import * as vscode from "vscode";
-import * as fs from "fs";
-import * as glob from "glob";
 import { LookML } from "./workspace-tools/parse-lookml";
 import {
   LookerServices,
@@ -20,12 +18,11 @@ export function activate(context: vscode.ExtensionContext) {
     workspaceFolders && workspaceFolders.length > 0
       ? workspaceFolders[0].uri.fsPath
       : "";
-  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then((result) => {
+  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then(() => {
     // TODO: Add view name
     // TODO: Line number.
     // TODO: Add fields to intellisense.
     // TODO: Peek / Goto
-    // TODO: Check result.
   });
 
   // Retrieve API credentials, if stored.
@@ -38,6 +35,38 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showErrorMessage(reason["error"]);
     });
 
+  // Helper functions for position-based completion logic
+  function isInViewReferenceContext(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): { isInContext: boolean; viewName?: string } {
+    const lineText = document.lineAt(position).text;
+    const textBeforeCursor = lineText.substring(0, position.character);
+
+    // Look for ${view_name. pattern
+    const dollarBraceMatch = textBeforeCursor.match(/\$\{([^}]*?)\.?$/);
+    if (dollarBraceMatch) {
+      const content = dollarBraceMatch[1];
+      if (content && !content.includes(".")) {
+        // This is a view name context like ${view_name.
+        return { isInContext: true, viewName: content };
+      }
+    }
+
+    return { isInContext: false };
+  }
+
+  function isInViewNameContext(
+    document: vscode.TextDocument,
+    position: vscode.Position
+  ): boolean {
+    const lineText = document.lineAt(position).text;
+    const textBeforeCursor = lineText.substring(0, position.character);
+
+    // Check if we're in a ${... context but haven't typed the view name yet
+    return textBeforeCursor.match(/\$\{[^}]*$/) !== null;
+  }
+
   // Auto-completion providers.
   const viewNameProvider = vscode.languages.registerCompletionItemProvider(
     "lookml",
@@ -46,25 +75,21 @@ export function activate(context: vscode.ExtensionContext) {
         document: vscode.TextDocument,
         position: vscode.Position
       ) {
-        let lineOfInterest = document.lineAt(position);
-        let candidateString = lineOfInterest.text.substring(
-          position.character - 2,
-          position.character
-        );
-        if (candidateString === "${") {
+        // Use intelligent context detection instead of simple string matching
+        if (isInViewNameContext(document, position)) {
           let completionItems: vscode.CompletionItem[] = [];
           for (let viewName of lookml.views.map(({ name }) => name)) {
-            completionItems.push(
-              new vscode.CompletionItem(
-                String(viewName),
-                vscode.CompletionItemKind.Field
-              )
+            const item = new vscode.CompletionItem(
+              String(viewName),
+              vscode.CompletionItemKind.Field
             );
+            // Add helpful detail to distinguish views
+            item.detail = `View: ${viewName}`;
+            completionItems.push(item);
           }
           return completionItems;
-        } else {
-          return [];
         }
+        return [];
       },
     },
     "{"
@@ -77,48 +102,31 @@ export function activate(context: vscode.ExtensionContext) {
         document: vscode.TextDocument,
         position: vscode.Position
       ) {
-        let lineOfInterest = document.lineAt(position);
-        let candidateString = lineOfInterest.text.substring(
-          0,
-          position.character
-        );
-        let numberOfOpenCurlysBefore = candidateString.replace(
-          /[^\{]/g,
-          ""
-        ).length;
-        let numberOfCloseCurlysBefore = candidateString.replace(
-          /[^\}]/g,
-          ""
-        ).length;
+        // Use position-based logic instead of fragile brace counting
+        const referenceContext = isInViewReferenceContext(document, position);
 
-        // Only show field names if inside a view completion.
-        if (numberOfOpenCurlysBefore > numberOfCloseCurlysBefore) {
-          let completionItems: vscode.CompletionItem[] = [];
-          let indexOfLastClosedCurly = candidateString.lastIndexOf("{");
-          let indexOfLastTrigger = candidateString.lastIndexOf(".");
+        if (referenceContext.isInContext && referenceContext.viewName) {
+          // Find the referenced view
+          const view = lookml.views.find(
+            (v) => v.name === referenceContext.viewName
+          );
 
-          // Only trigger if inside view completion.
-          if (indexOfLastClosedCurly > -1 && indexOfLastTrigger > -1) {
-            let viewName = candidateString.substring(
-              indexOfLastClosedCurly + 1,
-              indexOfLastTrigger
-            );
-            var view = lookml.views.find(function (element) {
-              return element.name === viewName;
-            });
-            if (view) {
-              for (let fieldName of view.fields.map(({ name }) => name)) {
-                completionItems.push(
-                  new vscode.CompletionItem(
-                    String(fieldName),
-                    vscode.CompletionItemKind.Field
-                  )
-                );
-              }
-              return completionItems;
+          if (view) {
+            let completionItems: vscode.CompletionItem[] = [];
+            for (let field of view.fields) {
+              const item = new vscode.CompletionItem(
+                String(field.name),
+                vscode.CompletionItemKind.Field
+              );
+              // Add helpful details about the field
+              item.detail = `${field.type} field from ${view.name}`;
+              item.documentation = `Field: ${field.name}\nType: ${field.type}\nView: ${view.name}`;
+              completionItems.push(item);
             }
+            return completionItems;
           }
         }
+
         return [];
       },
     },
@@ -189,20 +197,20 @@ export function activate(context: vscode.ExtensionContext) {
 // this method is called when your extension is deactivated
 export function deactivate() {}
 
-function getApiCredentialFromUser(credentialType: string) {
-  return new Promise<String>(async (resolve, reject) => {
-    let options: vscode.InputBoxOptions = {
-      prompt: `Please enter your Looker API ${credentialType}`,
-      password: true,
-      placeHolder: `Looker API ${credentialType}...`,
-      ignoreFocusOut: true,
-    };
+async function getApiCredentialFromUser(
+  credentialType: string
+): Promise<string> {
+  let options: vscode.InputBoxOptions = {
+    prompt: `Please enter your Looker API ${credentialType}`,
+    password: true,
+    placeHolder: `Looker API ${credentialType}...`,
+    ignoreFocusOut: true,
+  };
 
-    const value = await vscode.window.showInputBox(options);
-    if (value) {
-      resolve(value);
-    } else {
-      reject("No value provided");
-    }
-  });
+  const value = await vscode.window.showInputBox(options);
+  if (value) {
+    return value;
+  } else {
+    throw new Error("No value provided");
+  }
 }
