@@ -80,6 +80,7 @@
     },
     "dependencies": {
         "glob": "^10.3.10",
+        "lookml-parser": "^7.0.1",
         "node-fetch": "^3.3.2"
     }
 }
