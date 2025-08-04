@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { LookML } from "./workspace-tools/parse-lookml";
 import { LookerServices } from "./looker-api/looker-services";
 import { LookmlLanguageService } from "./services/lookml-language-service";
+import { LookmlSchemaService } from "./services/lookml-schema-service";
 import { CompletionProviderService } from "./services/completion-provider-service";
 import { CommandService } from "./services/command-service";
 import { MESSAGES } from "./constants";
@@ -17,6 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
   const lookerServices = new LookerServices(context);
   const lookml = new LookML();
   const lookmlLanguageService = new LookmlLanguageService();
+  const lookmlSchemaService = new LookmlSchemaService();
 
   // Initialize workspace and parse LookML files
   initializeWorkspace(lookml);
@@ -24,10 +26,14 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize API credentials
   initializeApiCredentials(lookerServices);
 
-  // Create and register service providers
+  // Inject the LookML instance into the language service for robust context detection
+  lookmlLanguageService.setLookmlInstance(lookml);
+
+  // Create and register service providers, injecting the new schema service
   const completionProviderService = new CompletionProviderService(
     lookml,
-    lookmlLanguageService
+    lookmlLanguageService,
+    lookmlSchemaService
   );
   const commandService = new CommandService(lookerServices);
 
