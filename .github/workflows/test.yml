@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linter (warnings only)
-        run: npm run lint || echo "Linting completed with warnings - this is expected until legacy code is refactored"
+      - name: Run linter
+        run: npm run lint
 
       - name: Compile TypeScript
         run: npm run compile

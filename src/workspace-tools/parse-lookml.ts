@@ -84,7 +84,7 @@ export class LookML {
     content: string,
     fileName: string
   ): { views: LookmlView[]; explores: LookmlExplore[] } {
-    const filename = fileName.replace(/^.*[\\\/]/, "");
+    const filename = fileName.replace(/^.*[\\/]/, "");
 
     try {
       // Parse using the new lookml-parser
@@ -391,30 +391,28 @@ export class LookML {
   }
 
   private async findAllFieldNamesInWorkspace(filePaths: string[]) {
-    return new Promise<void>(async (resolve, reject) => {
-      for (const filePath of filePaths) {
-        await this.readFile(filePath);
-      }
-      resolve();
+    return new Promise<void>((resolve) => {
+      (async () => {
+        for (const filePath of filePaths) {
+          await this.readFile(filePath);
+        }
+        resolve();
+      })();
     });
   }
 
   private readFile(filePath: string) {
-    return new Promise<void>(async (resolve, reject) => {
-      fs.readFile(
-        filePath,
-        "utf-8",
-        await (async (err, data) => {
-          if (err) {
-            throw err;
-          }
+    return new Promise<void>((resolve) => {
+      fs.readFile(filePath, "utf-8", async (err, data) => {
+        if (err) {
+          throw err;
+        }
 
-          // Use the new parsing method for consistency
-          var filename = filePath.replace(/^.*[\\\/]/, "");
-          this.parseAndMergeContent(data, filename);
-          resolve();
-        })
-      );
+        // Use the new parsing method for consistency
+        var filename = filePath.replace(/^.*[\\/]/, "");
+        this.parseAndMergeContent(data, filename);
+        resolve();
+      });
     });
   }
 }

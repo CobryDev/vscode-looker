@@ -18,7 +18,7 @@ import { runTests } from "@vscode/test-electron";
 
 export function run(
   testsRoot: string,
-  clb: (error: Error | null, failures?: number) => void
+  clb: (_error: Error | null, _failures?: number) => void
 ): void {
   runTests({
     extensionDevelopmentPath: testsRoot,

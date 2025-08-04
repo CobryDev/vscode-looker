@@ -54,7 +54,10 @@ export default [
 
       // Disable some conflicting rules
       "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
 
       // TypeScript specific rules
       "@typescript-eslint/naming-convention": [
@@ -100,7 +103,11 @@ export default [
     rules: {
       // Test-specific relaxed rules
       "no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
     },
   },
   // Jest test files configuration
@@ -139,7 +146,10 @@ export default [
     rules: {
       // Test-specific relaxed rules
       "no-unused-expressions": "off",
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
     },
   },
 ];
