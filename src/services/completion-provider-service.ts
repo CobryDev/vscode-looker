@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { LookML } from "../workspace-tools/parse-lookml";
 import { LookmlLanguageService } from "./lookml-language-service";
+import { LANGUAGE, COMPLETION_TRIGGERS } from "../constants";
 
 /**
  * Service responsible for managing all completion providers for LookML
@@ -33,7 +34,7 @@ export class CompletionProviderService {
    */
   private createViewNameProvider(): vscode.Disposable {
     return vscode.languages.registerCompletionItemProvider(
-      "lookml",
+      LANGUAGE.ID,
       {
         provideCompletionItems: (
           document: vscode.TextDocument,
@@ -56,7 +57,7 @@ export class CompletionProviderService {
           return [];
         },
       },
-      "{"
+      COMPLETION_TRIGGERS.VIEW_NAME
     );
   }
 
@@ -65,7 +66,7 @@ export class CompletionProviderService {
    */
   private createFieldNameProvider(): vscode.Disposable {
     return vscode.languages.registerCompletionItemProvider(
-      "lookml",
+      LANGUAGE.ID,
       {
         provideCompletionItems: (
           document: vscode.TextDocument,
@@ -100,7 +101,7 @@ export class CompletionProviderService {
           return [];
         },
       },
-      "."
+      COMPLETION_TRIGGERS.FIELD_NAME
     );
   }
 

@@ -4,6 +4,7 @@ import {
   LookerApiCredentials,
   LookerCredentialKeys,
 } from "../looker-api/looker-services";
+import { COMMANDS, MESSAGES } from "../constants";
 
 /**
  * Service responsible for registering and managing all extension commands
@@ -33,7 +34,7 @@ export class CommandService {
    * Creates the save password command
    */
   private createSavePasswordCommand(): vscode.Disposable {
-    return vscode.commands.registerCommand("looker.savePassword", async () => {
+    return vscode.commands.registerCommand(COMMANDS.SAVE_PASSWORD, async () => {
       const apiCredentials: LookerApiCredentials = {
         lookerId: "",
         lookerSecret: "",
@@ -73,23 +74,25 @@ export class CommandService {
    * Creates the API login command
    */
   private createApiLoginCommand(): vscode.Disposable {
-    return vscode.commands.registerCommand("looker.apiLogin", async () => {
+    return vscode.commands.registerCommand(COMMANDS.API_LOGIN, async () => {
       try {
         // Create API client and test connection
         const apiClient = await this.lookerServices.createApiClient();
         const result = await apiClient.testConnection();
 
         if (result.error) {
-          vscode.window.showErrorMessage(`API login failed: ${result.error}`);
-        } else {
-          vscode.window.showInformationMessage(
-            "Successfully connected to Looker API!"
+          vscode.window.showErrorMessage(
+            `${MESSAGES.ERRORS.API_LOGIN_FAILED}: ${result.error}`
           );
+        } else {
+          vscode.window.showInformationMessage(MESSAGES.CONNECTION_SUCCESS);
         }
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        vscode.window.showErrorMessage(`API login failed: ${errorMessage}`);
+        vscode.window.showErrorMessage(
+          `${MESSAGES.ERRORS.API_LOGIN_FAILED}: ${errorMessage}`
+        );
       }
     });
   }
@@ -113,7 +116,7 @@ export class CommandService {
     if (value) {
       return value;
     } else {
-      throw new Error(`No value provided for ${credentialType}`);
+      throw new Error(`${MESSAGES.ERRORS.NO_VALUE_PROVIDED} ${credentialType}`);
     }
   }
 

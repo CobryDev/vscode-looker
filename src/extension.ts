@@ -4,13 +4,14 @@ import { LookerServices } from "./looker-api/looker-services";
 import { LookmlLanguageService } from "./services/lookml-language-service";
 import { CompletionProviderService } from "./services/completion-provider-service";
 import { CommandService } from "./services/command-service";
+import { MESSAGES } from "./constants";
 
 /**
  * Extension activation function - acts as a lightweight composition root
  * Instantiates and wires together different services
  */
 export function activate(context: vscode.ExtensionContext) {
-  vscode.window.showInformationMessage("Welcome good Looker!");
+  vscode.window.showInformationMessage(MESSAGES.WELCOME);
 
   // Initialize core services
   const lookerServices = new LookerServices(context);
@@ -69,15 +70,13 @@ function initializeApiCredentials(lookerServices: LookerServices): void {
   lookerServices
     .getLookerAPICredentials()
     .then((_result: any) => {
-      vscode.window.showInformationMessage(
-        "Looker API credentials loaded successfully."
-      );
+      vscode.window.showInformationMessage(MESSAGES.CREDENTIALS_LOADED);
     })
     .catch((reason) => {
       const errorMessage =
         reason instanceof Error ? reason.message : String(reason);
       vscode.window.showErrorMessage(
-        `Failed to load API credentials: ${errorMessage}`
+        `${MESSAGES.ERRORS.CREDENTIALS_FAILED}: ${errorMessage}`
       );
     });
 }

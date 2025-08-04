@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import fetch, { RequestInit } from "node-fetch";
 import { URLSearchParams } from "url";
+import { LOOKER_API, MESSAGES } from "../constants";
 
 // TODO: Move constants to package.json.
 
@@ -192,11 +193,11 @@ export class LookerApiClient {
 
   constructor(credentials: LookerApiCredentials) {
     this.credentials = credentials;
-    this.baseUrl = `${credentials.lookerServerUrl}:${credentials.lookerServerPort}/api/4.0`;
+    this.baseUrl = `${credentials.lookerServerUrl}:${credentials.lookerServerPort}/api/${LOOKER_API.VERSION}`;
   }
 
   private async authenticate(): Promise<LookerAuthToken> {
-    const authUrl = `${this.baseUrl}/login`;
+    const authUrl = `${this.baseUrl}${LOOKER_API.ENDPOINTS.LOGIN}`;
     const authData = {
       client_id: this.credentials.lookerId.toString(),
       client_secret: this.credentials.lookerSecret.toString(),
@@ -206,14 +207,15 @@ export class LookerApiClient {
       const response = await fetch(authUrl, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          [LOOKER_API.HEADERS.CONTENT_TYPE]:
+            LOOKER_API.CONTENT_TYPES.FORM_URLENCODED,
         },
         body: new URLSearchParams(authData),
       });
 
       if (!response.ok) {
         throw new Error(
-          `Authentication failed: ${response.status} ${response.statusText}`
+          `${MESSAGES.ERRORS.AUTH_FAILED}: ${response.status} ${response.statusText}`
         );
       }
 
@@ -228,7 +230,7 @@ export class LookerApiClient {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       throw new Error(
-        `Failed to authenticate with Looker API: ${errorMessage}`
+        `${MESSAGES.ERRORS.AUTH_FAILED} with Looker API: ${errorMessage}`
       );
     }
   }
@@ -262,8 +264,8 @@ export class LookerApiClient {
       const response = await fetch(url, {
         ...options,
         headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
+          [LOOKER_API.HEADERS.AUTHORIZATION]: authHeader,
+          [LOOKER_API.HEADERS.CONTENT_TYPE]: LOOKER_API.CONTENT_TYPES.JSON,
           ...options.headers,
         },
       });
@@ -287,7 +289,7 @@ export class LookerApiClient {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       return {
-        error: `Request failed: ${errorMessage}`,
+        error: `${MESSAGES.ERRORS.REQUEST_FAILED}: ${errorMessage}`,
         status: 0,
       };
     }
@@ -351,14 +353,16 @@ export class LookerApiClient {
    * Get model information
    */
   public async getModel(modelName: string): Promise<LookerApiResponse<any>> {
-    return this.makeRequest(`/lookml_models/${modelName}`);
+    return this.makeRequest(
+      `${LOOKER_API.ENDPOINTS.LOOKML_MODELS}/${modelName}`
+    );
   }
 
   /**
    * Test the connection to Looker API
    */
   public async testConnection(): Promise<LookerApiResponse<any>> {
-    return this.makeRequest("/user");
+    return this.makeRequest(LOOKER_API.ENDPOINTS.USER);
   }
 
   /**
