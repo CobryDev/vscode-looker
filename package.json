@@ -3,7 +3,6 @@
     "displayName": "looker",
     "description": "Tools to aid development of LookML",
     "version": "0.0.3",
-    "type": "module",
     "engines": {
         "vscode": "^1.32.0"
     },
