@@ -1,6 +1,8 @@
 import * as fs from "fs";
 import { glob } from "glob";
 
+const lookmlParser = require("lookml-parser");
+
 export interface LookmlField {
   name: String;
   type: String;
@@ -64,108 +66,180 @@ export class LookML {
   }
 
   /**
-   * Internal method to parse LookML content from a string
+   * Internal method to parse LookML content from a string using node-lookml-parser
    */
   private parseContentInternal(
     content: string,
     fileName: string
   ): { views: LookmlView[]; explores: LookmlExplore[] } {
+    const filename = fileName.replace(/^.*[\\\/]/, "");
+
+    try {
+      // Parse using the new lookml-parser
+      const parsed = lookmlParser.parse(content);
+
+      // Transform the parsed output to our existing interfaces
+      return this.mapParsedToInterfaces(parsed, filename);
+    } catch (error) {
+      console.error(`Error parsing LookML file ${filename}:`, error);
+      // Return empty arrays on parse error
+      return { views: [], explores: [] };
+    }
+  }
+
+  /**
+   * Maps the output from lookml-parser to our existing LookmlView and LookmlExplore interfaces
+   */
+  private mapParsedToInterfaces(
+    parsed: any,
+    fileName: string
+  ): { views: LookmlView[]; explores: LookmlExplore[] } {
     const views: LookmlView[] = [];
     const explores: LookmlExplore[] = [];
 
-    let lines = content.split("\n");
-    var filename = fileName.replace(/^.*[\\\/]/, "");
-    let parentType: LookmlParentType = LookmlParentType.unknown;
+    // Process views
+    if (parsed.view) {
+      for (const [viewName, viewData] of Object.entries(parsed.view)) {
+        const fields = this.extractFieldsFromViewData(
+          viewData as any,
+          viewName,
+          fileName
+        );
 
-    let view: LookmlView = {
-      name: "unknown",
-      fields: [],
-      fileName: "",
-      lineNumber: 0,
-    };
-    let explore: LookmlExplore = {
-      name: "unknown",
-      fields: [],
-      fileName: "",
-      lineNumber: 0,
-    };
-
-    for (var i in lines) {
-      // If commented field, skip it.
-      let line = lines[i].trim();
-      if (line[0] === "#" || (line[0] === "/" && line[1] === "/")) {
-        continue;
+        views.push({
+          name: viewName,
+          fields,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available in parser output
+        });
       }
-
-      // Determine if save to explores or views.
-      if (line.includes("view:")) {
-        // Save previous view if it exists
-        if (view.name !== "unknown") {
-          views.push(view);
-        }
-
-        parentType = LookmlParentType.view;
-        view = {
-          name: this.extractName(line),
-          fields: [],
-          fileName: filename,
-          lineNumber: Number(i),
-        };
-        continue;
-      } else if (line.includes("explore:")) {
-        // Save previous explore if it exists
-        if (explore.name !== "unknown") {
-          explores.push(explore);
-        }
-
-        explore = {
-          name: this.extractName(line),
-          fields: [],
-          fileName: filename,
-          lineNumber: Number(i),
-        };
-        parentType = LookmlParentType.explore;
-        continue;
-      }
-      if (
-        line.includes("measure:") ||
-        line.includes("dimension:") ||
-        line.includes("filter:") ||
-        line.includes("parameter:") ||
-        line.includes("join:")
-      ) {
-        let lookmlField: LookmlField = {
-          name: this.extractName(line),
-          type: this.extractType(line),
-          lineNumber: Number(i),
-          viewName: view.name,
-          fileName: filename,
-        };
-        switch (parentType) {
-          case LookmlParentType.explore:
-            explore.fields.push(lookmlField);
-            break;
-          case LookmlParentType.view:
-            view.fields.push(lookmlField);
-            break;
-          case LookmlParentType.unknown:
-            console.log('CRAP! LookmlParentType is "unknown."');
-            break;
-          default:
-            break;
-        }
-      }
-    } // End lines loop
-
-    // Save final view and explore if they exist
-    if (view.name !== "unknown") {
-      views.push(view);
     }
-    if (explore.name !== "unknown") {
-      explores.push(explore);
+
+    // Process explores
+    if (parsed.explore) {
+      for (const [exploreName, exploreData] of Object.entries(parsed.explore)) {
+        const fields = this.extractFieldsFromExploreData(
+          exploreData as any,
+          exploreName,
+          fileName
+        );
+
+        explores.push({
+          name: exploreName,
+          fields,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available in parser output
+        });
+      }
     }
 
     return { views, explores };
+  }
+
+  /**
+   * Extracts fields from view data in the parsed structure
+   */
+  private extractFieldsFromViewData(
+    viewData: any,
+    viewName: string,
+    fileName: string
+  ): LookmlField[] {
+    const fields: LookmlField[] = [];
+
+    // Process dimensions
+    if (viewData.dimension) {
+      for (const [fieldName, fieldData] of Object.entries(viewData.dimension)) {
+        fields.push({
+          name: fieldName,
+          type: "dimension",
+          viewName,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    // Process measures
+    if (viewData.measure) {
+      for (const [fieldName, fieldData] of Object.entries(viewData.measure)) {
+        fields.push({
+          name: fieldName,
+          type: "measure",
+          viewName,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    // Process filters
+    if (viewData.filter) {
+      for (const [fieldName, fieldData] of Object.entries(viewData.filter)) {
+        fields.push({
+          name: fieldName,
+          type: "filter",
+          viewName,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    // Process parameters
+    if (viewData.parameter) {
+      for (const [fieldName, fieldData] of Object.entries(viewData.parameter)) {
+        fields.push({
+          name: fieldName,
+          type: "parameter",
+          viewName,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    // Process dimension groups
+    if (viewData.dimension_group) {
+      for (const [fieldName, fieldData] of Object.entries(
+        viewData.dimension_group
+      )) {
+        fields.push({
+          name: fieldName,
+          type: "dimension_group",
+          viewName,
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    return fields;
+  }
+
+  /**
+   * Extracts fields from explore data in the parsed structure
+   */
+  private extractFieldsFromExploreData(
+    exploreData: any,
+    exploreName: string,
+    fileName: string
+  ): LookmlField[] {
+    const fields: LookmlField[] = [];
+
+    // Process joins
+    if (exploreData.join) {
+      for (const [joinName, joinData] of Object.entries(exploreData.join)) {
+        fields.push({
+          name: joinName,
+          type: "join",
+          viewName: exploreName, // For explores, we use the explore name as the viewName
+          fileName,
+          lineNumber: 0, // TODO: Extract line numbers if available
+        });
+      }
+    }
+
+    return fields;
   }
 
   public parseWorkspaceLookmlFiles(workspacePath: String) {
@@ -216,18 +290,5 @@ export class LookML {
         })
       );
     });
-  }
-
-  private extractName(line: string) {
-    var fieldName = line
-      .substring(line.indexOf(":") + 1, line.indexOf("{") - 1)
-      .trim();
-    fieldName = fieldName.replace("[^a-zA-Z0-9_]g", "");
-    return fieldName;
-  }
-  private extractType(line: string) {
-    var type = line.split(":")[0];
-    type = type.replace("[^a-zA-Z0-9_]g", "").trim();
-    return type;
   }
 }
