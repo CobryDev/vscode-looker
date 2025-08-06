@@ -78,6 +78,10 @@ export class LanguageServerClientService implements vscode.Disposable {
         },
         outputChannel: this.outputChannel,
         revealOutputChannelOn: RevealOutputChannelOn.Info,
+        // Enable semantic tokens support
+        initializationOptions: {
+          semanticTokens: true,
+        },
       };
 
       // Create the language client and start the client

@@ -26,6 +26,8 @@ import {
   HoverParams,
   Hover,
   ReferenceParams,
+  SemanticTokensParams,
+  SemanticTokens,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -37,6 +39,10 @@ import { LookMLCompletionProvider } from "./completion-provider";
 import { LookMLDefinitionProvider } from "./definition-provider";
 import { LookMLHoverProvider } from "./hover-provider";
 import { LookMLReferenceProvider } from "./reference-provider";
+import {
+  LookMLSemanticTokensProvider,
+  createSemanticTokensLegend,
+} from "./semantic-tokens-provider";
 
 // Create a connection for the server, using Node's IPC as a transport.
 const connection = createConnection(ProposedFeatures.all);
@@ -53,6 +59,7 @@ let completionProvider: LookMLCompletionProvider;
 let definitionProvider: LookMLDefinitionProvider;
 let hoverProvider: LookMLHoverProvider;
 let referenceProvider: LookMLReferenceProvider;
+let semanticTokensProvider: LookMLSemanticTokensProvider;
 
 // Configuration
 let hasConfigurationCapability = false;
@@ -90,6 +97,7 @@ connection.onInitialize((params: InitializeParams) => {
   definitionProvider = new LookMLDefinitionProvider(workspace);
   hoverProvider = new LookMLHoverProvider(workspace);
   referenceProvider = new LookMLReferenceProvider(workspace);
+  semanticTokensProvider = new LookMLSemanticTokensProvider(workspace);
 
   const result: InitializeResult = {
     capabilities: {
@@ -110,6 +118,14 @@ connection.onInitialize((params: InitializeParams) => {
       hoverProvider: true,
       // Support find references
       referencesProvider: true,
+      // Support semantic tokens
+      semanticTokensProvider: {
+        legend: createSemanticTokensLegend(),
+        range: false,
+        full: {
+          delta: false,
+        },
+      },
     },
   };
 
@@ -285,6 +301,28 @@ connection.onReferences(
     } catch (error) {
       connection.console.error(`Error finding references: ${error}`);
       return [];
+    }
+  }
+);
+
+/**
+ * Handle semantic tokens requests
+ */
+connection.languages.semanticTokens.on(
+  async (params: SemanticTokensParams): Promise<SemanticTokens> => {
+    try {
+      const result = await semanticTokensProvider.getSemanticTokens(
+        params.textDocument.uri
+      );
+      if (result) {
+        return result;
+      }
+      // Return empty semantic tokens if no result
+      return { data: [] };
+    } catch (error) {
+      connection.console.error(`Error providing semantic tokens: ${error}`);
+      // Return empty semantic tokens on error
+      return { data: [] };
     }
   }
 );
