@@ -1,75 +1,50 @@
 import * as vscode from "vscode";
-import { LookML } from "./workspace-tools/parse-lookml";
 import { LookerServices } from "./looker-api/looker-services";
-import { LookmlLanguageService } from "./services/lookml-language-service";
-import { LookmlSchemaService } from "./services/lookml-schema-service";
-import { CompletionProviderService } from "./services/completion-provider-service";
 import { CommandService } from "./services/command-service";
+import { LanguageServerClientService } from "./services/language-server-client";
 import { MESSAGES } from "./constants";
 
 /**
- * Extension activation function - acts as a lightweight composition root
- * Instantiates and wires together different services
+ * Extension activation function - Pure LSP Client
+ *
+ * This extension now acts as a pure Language Server Protocol client,
+ * delegating all language intelligence to the dedicated Language Server.
  */
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage(MESSAGES.WELCOME);
 
-  // Initialize core services
-  const lookerServices = new LookerServices(context);
-  const lookml = new LookML();
-  const lookmlLanguageService = new LookmlLanguageService();
-  const lookmlSchemaService = new LookmlSchemaService();
+  // Initialize Language Server - this provides all language intelligence
+  const languageServerClient = new LanguageServerClientService(context);
 
-  // Initialize workspace and parse LookML files
-  initializeWorkspace(lookml);
+  try {
+    await languageServerClient.start();
+    console.log("LookML Language Server started successfully");
+
+    // Show success message to user
+    vscode.window.showInformationMessage(
+      "LookML Language Server is running. Enjoy enhanced LookML development features!"
+    );
+  } catch (error) {
+    console.error("Failed to start LookML Language Server:", error);
+    vscode.window.showErrorMessage(
+      "LookML Language Server failed to start. Please check the output panel for details and restart VS Code if needed."
+    );
+
+    // Still continue with basic services even if Language Server fails
+  }
+
+  // Initialize Looker API services (independent of Language Server)
+  const lookerServices = new LookerServices(context);
+  const commandService = new CommandService(lookerServices);
 
   // Initialize API credentials
   initializeApiCredentials(lookerServices);
 
-  // Inject the LookML instance into the language service for robust context detection
-  lookmlLanguageService.setLookmlInstance(lookml);
-
-  // Create and register service providers, injecting the new schema service
-  const completionProviderService = new CompletionProviderService(
-    lookml,
-    lookmlLanguageService,
-    lookmlSchemaService
-  );
-  const commandService = new CommandService(lookerServices);
-
-  // Register all providers and commands
-  const completionProviders =
-    completionProviderService.registerCompletionProviders();
+  // Register API-related commands
   const commands = commandService.registerCommands();
 
   // Add all disposables to context subscriptions
-  context.subscriptions.push(
-    ...completionProviders,
-    ...commands,
-    completionProviderService,
-    commandService
-  );
-}
-
-/**
- * Initializes the workspace and parses LookML files
- */
-function initializeWorkspace(lookml: LookML): void {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  const workspaceRoot =
-    workspaceFolders && workspaceFolders.length > 0
-      ? workspaceFolders[0].uri.fsPath
-      : "";
-
-  lookml.parseWorkspaceLookmlFiles(workspaceRoot).then((result) => {
-    console.log(
-      `LookML parsing completed: ${result.filesProcessed} files processed, ${result.viewsFound} views found, ${result.exploresFound} explores found`
-    );
-    // TODO: Add view name
-    // TODO: Line number.
-    // TODO: Add fields to intellisense.
-    // TODO: Peek / Goto
-  });
+  context.subscriptions.push(languageServerClient, commandService, ...commands);
 }
 
 /**

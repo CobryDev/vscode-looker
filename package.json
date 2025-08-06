@@ -3,7 +3,8 @@
     "displayName": "Looker",
     "publisher": "Cobry",
     "description": "A simple extension for LookML development.",
-    "version": "0.0.4",
+    "version": "0.0.5",
+    "icon": "icon.png",
     "repository": {
         "type": "git",
         "url": "https://github.com/CobryDev/vscode-looker.git"
@@ -24,6 +25,18 @@
             {
                 "command": "looker.apiLogin",
                 "title": "Log in to Looker API."
+            },
+            {
+                "command": "lookml.restartLanguageServer",
+                "title": "Restart LookML Language Server"
+            },
+            {
+                "command": "lookml.showLanguageServerOutput",
+                "title": "Show LookML Language Server Output"
+            },
+            {
+                "command": "lookml.showWorkspaceDiagnostics",
+                "title": "Show LookML Workspace Diagnostics"
             }
         ],
         "languages": [
@@ -63,6 +76,7 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
+        "compile:server": "tsc -p ./",
         "test": "jest",
         "test:unit": "jest",
         "test:integration": "npm run compile && node ./node_modules/@vscode/test-electron/out/runTest.js",
@@ -87,6 +101,10 @@
         "glob": "^10.3.10",
         "lookml-parser": "^7.0.1",
         "node-fetch": "^3.3.2",
+        "vscode-languageclient": "^9.0.1",
+        "vscode-languageserver": "^9.0.1",
+        "vscode-languageserver-textdocument": "^1.0.11",
+        "vscode-uri": "^3.0.8",
         "zod": "^4.0.14"
     }
 }
