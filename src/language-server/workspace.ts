@@ -18,6 +18,8 @@ import {
   ModelNode,
   AnyASTNode,
 } from "../workspace-tools/ast-types";
+import { SemanticAnalyzer } from "./semantic-analyzer";
+import { SemanticModel } from "./semantic-model";
 
 /**
  * Represents a parsed LookML document in the workspace
@@ -51,13 +53,14 @@ export interface SymbolInfo {
  */
 export class LookMLWorkspace {
   private documents = new Map<string, WorkspaceDocument>();
-  private symbolIndex = new Map<string, SymbolInfo[]>();
-  private viewIndex = new Map<string, SymbolInfo>();
-  private exploreIndex = new Map<string, SymbolInfo>();
   private workspacePath: string;
+  private semanticAnalyzer = new SemanticAnalyzer();
+  public semanticModel: SemanticModel;
 
   constructor(workspacePath: string) {
     this.workspacePath = workspacePath;
+    // Initialize with an initial analysis model (empty until documents are loaded)
+    this.semanticModel = this.semanticAnalyzer.analyze(this);
   }
 
   /**
@@ -72,7 +75,8 @@ export class LookMLWorkspace {
         await this.loadDocument(uri);
       }
 
-      this.rebuildIndexes();
+      // Run semantic analysis after initial load
+      this.semanticModel = this.semanticAnalyzer.analyze(this);
     } catch (error) {
       throw new Error(`Failed to initialize workspace: ${error}`);
     }
@@ -105,6 +109,8 @@ export class LookMLWorkspace {
   updateDocument(uri: string, content: string): void {
     const fileName = path.basename(URI.parse(uri).fsPath);
     this.parseAndStoreDocument(uri, fileName, content, Date.now());
+    // Trigger semantic analysis on document update
+    this.semanticModel = this.semanticAnalyzer.analyze(this);
   }
 
   /**
@@ -112,7 +118,7 @@ export class LookMLWorkspace {
    */
   removeDocument(uri: string): void {
     this.documents.delete(uri);
-    this.rebuildIndexes();
+    this.semanticModel = this.semanticAnalyzer.analyze(this);
   }
 
   /**
@@ -136,7 +142,8 @@ export class LookMLWorkspace {
     };
 
     this.documents.set(uri, document);
-    this.rebuildIndexes();
+    // Keep analysis in sync when parse/store happens through this path
+    this.semanticModel = this.semanticAnalyzer.analyze(this);
   }
 
   /**
@@ -161,306 +168,6 @@ export class LookMLWorkspace {
   }
 
   /**
-   * Find a view by name across the workspace
-   */
-  findView(viewName: string): SymbolInfo | undefined {
-    return this.viewIndex.get(viewName);
-  }
-
-  /**
-   * Find an explore by name across the workspace
-   */
-  findExplore(exploreName: string): SymbolInfo | undefined {
-    return this.exploreIndex.get(exploreName);
-  }
-
-  /**
-   * Find symbols by name (fuzzy search)
-   */
-  findSymbols(query: string): SymbolInfo[] {
-    const results: SymbolInfo[] = [];
-    const lowerQuery = query.toLowerCase();
-
-    for (const symbols of this.symbolIndex.values()) {
-      for (const symbol of symbols) {
-        if (symbol.name.toLowerCase().includes(lowerQuery)) {
-          results.push(symbol);
-        }
-      }
-    }
-
-    return results.sort((a, b) => {
-      // Exact matches first
-      const aExact = a.name.toLowerCase() === lowerQuery;
-      const bExact = b.name.toLowerCase() === lowerQuery;
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-
-      // Then prefix matches
-      const aPrefix = a.name.toLowerCase().startsWith(lowerQuery);
-      const bPrefix = b.name.toLowerCase().startsWith(lowerQuery);
-      if (aPrefix && !bPrefix) return -1;
-      if (!aPrefix && bPrefix) return 1;
-
-      // Finally alphabetical
-      return a.name.localeCompare(b.name);
-    });
-  }
-
-  /**
-   * Get all views in the workspace
-   */
-  getAllViews(): SymbolInfo[] {
-    return Array.from(this.viewIndex.values());
-  }
-
-  /**
-   * Get all explores in the workspace
-   */
-  getAllExplores(): SymbolInfo[] {
-    return Array.from(this.exploreIndex.values());
-  }
-
-  /**
-   * Get symbols at a specific position in a document
-   */
-  getSymbolAt(
-    uri: string,
-    line: number,
-    character: number
-  ): SymbolInfo | undefined {
-    const symbols = this.symbolIndex.get(uri);
-    if (!symbols) return undefined;
-
-    // Find the most specific symbol at this position
-    let bestMatch: SymbolInfo | undefined;
-    let smallestRange = Infinity;
-
-    for (const symbol of symbols) {
-      if (this.isPositionInRange(line, character, symbol)) {
-        const range =
-          (symbol.endLine - symbol.startLine) * 1000 +
-          (symbol.endChar - symbol.startChar);
-        if (range < smallestRange) {
-          smallestRange = range;
-          bestMatch = symbol;
-        }
-      }
-    }
-
-    return bestMatch;
-  }
-
-  /**
-   * Check if a position is within a symbol's range
-   */
-  private isPositionInRange(
-    line: number,
-    character: number,
-    symbol: SymbolInfo
-  ): boolean {
-    if (line < symbol.startLine || line > symbol.endLine) {
-      return false;
-    }
-    if (line === symbol.startLine && character < symbol.startChar) {
-      return false;
-    }
-    if (line === symbol.endLine && character > symbol.endChar) {
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Find all references to a symbol
-   */
-  findReferences(symbolName: string, symbolType?: string): SymbolInfo[] {
-    const references: SymbolInfo[] = [];
-
-    for (const doc of this.getParsedDocuments()) {
-      const docReferences = this.findReferencesInDocument(
-        doc,
-        symbolName,
-        symbolType
-      );
-      references.push(...docReferences);
-    }
-
-    return references;
-  }
-
-  /**
-   * Find references to a symbol within a specific document
-   */
-  private findReferencesInDocument(
-    doc: WorkspaceDocument,
-    symbolName: string,
-    symbolType?: string
-  ): SymbolInfo[] {
-    const references: SymbolInfo[] = [];
-
-    if (!doc.ast) return references;
-
-    // For now, implement basic reference finding
-    // This can be enhanced with more sophisticated analysis
-    const symbols = this.symbolIndex.get(doc.uri) || [];
-
-    for (const symbol of symbols) {
-      if (
-        symbol.name === symbolName &&
-        (!symbolType || symbol.type === symbolType)
-      ) {
-        references.push(symbol);
-      }
-    }
-
-    return references;
-  }
-
-  /**
-   * Rebuild symbol indexes after document changes
-   */
-  private rebuildIndexes(): void {
-    this.symbolIndex.clear();
-    this.viewIndex.clear();
-    this.exploreIndex.clear();
-
-    for (const doc of this.getParsedDocuments()) {
-      this.indexDocument(doc);
-    }
-  }
-
-  /**
-   * Index symbols in a document
-   */
-  private indexDocument(doc: WorkspaceDocument): void {
-    if (!doc.ast) return;
-
-    const symbols: SymbolInfo[] = [];
-
-    // Index views
-    for (const [viewName, viewNode] of Object.entries(doc.ast.views)) {
-      const viewSymbol = this.createSymbolInfo(viewName, "view", doc, viewNode);
-      symbols.push(viewSymbol);
-      this.viewIndex.set(viewName, viewSymbol);
-
-      // Index fields within the view
-      this.indexViewFields(viewNode, doc, symbols);
-    }
-
-    // Index explores
-    for (const [exploreName, exploreNode] of Object.entries(doc.ast.explores)) {
-      const exploreSymbol = this.createSymbolInfo(
-        exploreName,
-        "explore",
-        doc,
-        exploreNode
-      );
-      symbols.push(exploreSymbol);
-      this.exploreIndex.set(exploreName, exploreSymbol);
-
-      // Index joins within the explore
-      this.indexExploreJoins(exploreNode, doc, symbols);
-    }
-
-    // Index models
-    for (const [modelName, modelNode] of Object.entries(doc.ast.models)) {
-      const modelSymbol = this.createSymbolInfo(
-        modelName,
-        "model",
-        doc,
-        modelNode
-      );
-      symbols.push(modelSymbol);
-    }
-
-    this.symbolIndex.set(doc.uri, symbols);
-  }
-
-  /**
-   * Index fields within a view
-   */
-  private indexViewFields(
-    viewNode: ViewNode,
-    doc: WorkspaceDocument,
-    symbols: SymbolInfo[]
-  ): void {
-    // Index dimensions
-    for (const [dimName, dimNode] of Object.entries(viewNode.dimensions)) {
-      symbols.push(this.createSymbolInfo(dimName, "dimension", doc, dimNode));
-    }
-
-    // Index measures
-    for (const [measureName, measureNode] of Object.entries(
-      viewNode.measures
-    )) {
-      symbols.push(
-        this.createSymbolInfo(measureName, "measure", doc, measureNode)
-      );
-    }
-
-    // Index filters
-    for (const [filterName, filterNode] of Object.entries(viewNode.filters)) {
-      symbols.push(
-        this.createSymbolInfo(filterName, "filter", doc, filterNode)
-      );
-    }
-
-    // Index parameters
-    for (const [paramName, paramNode] of Object.entries(
-      viewNode.parameterNodes
-    )) {
-      symbols.push(
-        this.createSymbolInfo(paramName, "parameter", doc, paramNode)
-      );
-    }
-
-    // Index dimension groups
-    for (const [groupName, groupNode] of Object.entries(
-      viewNode.dimensionGroups
-    )) {
-      symbols.push(
-        this.createSymbolInfo(groupName, "dimension_group", doc, groupNode)
-      );
-    }
-  }
-
-  /**
-   * Index joins within an explore
-   */
-  private indexExploreJoins(
-    exploreNode: ExploreNode,
-    doc: WorkspaceDocument,
-    symbols: SymbolInfo[]
-  ): void {
-    for (const [joinName, joinNode] of Object.entries(exploreNode.joins)) {
-      symbols.push(this.createSymbolInfo(joinName, "join", doc, joinNode));
-    }
-  }
-
-  /**
-   * Create a SymbolInfo object from an AST node
-   */
-  private createSymbolInfo(
-    name: string,
-    type: string,
-    doc: WorkspaceDocument,
-    node: AnyASTNode
-  ): SymbolInfo {
-    return {
-      name,
-      type,
-      uri: doc.uri,
-      fileName: doc.fileName,
-      startLine: node.position.startLine,
-      startChar: node.position.startChar,
-      endLine: node.position.endLine,
-      endChar: node.position.endChar,
-      node,
-    };
-  }
-
-  /**
    * Get workspace statistics
    */
   getWorkspaceStats(): {
@@ -478,8 +185,12 @@ export class LookMLWorkspace {
       totalFiles: allDocs.length,
       parsedFiles: parsedDocs.length,
       errorFiles: allDocs.length - parsedDocs.length,
-      totalViews: this.viewIndex.size,
-      totalExplores: this.exploreIndex.size,
+      totalViews: Array.from(this.semanticModel.symbols.values()).filter(
+        (s) => s.type === "view"
+      ).length,
+      totalExplores: Array.from(this.semanticModel.symbols.values()).filter(
+        (s) => s.type === "explore"
+      ).length,
       totalModels: parsedDocs.reduce(
         (count, doc) =>
           count + (doc.ast ? Object.keys(doc.ast.models).length : 0),

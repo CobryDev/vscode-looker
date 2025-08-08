@@ -35,48 +35,41 @@ export class LookMLReferenceProvider {
       return [];
     }
 
-    // Get the symbol at the current position
-    const symbol = this.workspace.getSymbolAt(
-      uri,
-      position.line,
-      position.character
+    // Find symbol via semantic model
+    const symbolsInFile = this.workspace.semanticModel.symbolsByUri.get(uri);
+    const symbol = symbolsInFile?.find((s) =>
+      this.isPositionInRange(position, s.declaration.position)
     );
-    if (!symbol) {
-      return [];
-    }
+    if (!symbol) return [];
 
-    // Find all references to this symbol
     const references: Location[] = [];
-
     if (context.includeDeclaration) {
-      // Include the declaration itself
       references.push({
-        uri: symbol.uri,
+        uri: symbol.declaration.uri,
         range: {
-          start: { line: symbol.startLine, character: symbol.startChar },
-          end: { line: symbol.endLine, character: symbol.endChar },
+          start: {
+            line: symbol.declaration.position.startLine,
+            character: symbol.declaration.position.startChar,
+          },
+          end: {
+            line: symbol.declaration.position.endLine,
+            character: symbol.declaration.position.endChar,
+          },
         },
       });
     }
 
-    // Find references based on symbol type
-    switch (symbol.type) {
-      case "view":
-        references.push(...this.findViewReferences(symbol.name));
-        break;
-      case "explore":
-        references.push(...this.findExploreReferences(symbol.name));
-        break;
-      case "dimension":
-      case "measure":
-      case "filter":
-      case "parameter":
-      case "dimension_group":
-        references.push(...this.findFieldReferences(symbol.name, symbol.type));
-        break;
-      default:
-        // Generic symbol search
-        references.push(...this.findGenericReferences(symbol.name));
+    for (const ref of symbol.references) {
+      references.push({
+        uri: ref.uri,
+        range: {
+          start: {
+            line: ref.position.startLine,
+            character: ref.position.startChar,
+          },
+          end: { line: ref.position.endLine, character: ref.position.endChar },
+        },
+      });
     }
 
     return references;
@@ -160,9 +153,9 @@ export class LookMLReferenceProvider {
     const references: Location[] = [];
 
     // Find the view that contains this field
-    const fieldSymbol = this.workspace
-      .findSymbols(fieldName)
-      .find((s) => s.type === fieldType);
+    const fieldSymbol = Array.from(
+      this.workspace.semanticModel.symbols.values()
+    ).find((s) => s.name === fieldName && s.type === fieldType);
     if (!fieldSymbol) return references;
 
     // Get the view name that contains this field
@@ -363,5 +356,29 @@ export class LookMLReferenceProvider {
     }
 
     return null;
+  }
+
+  private isPositionInRange(
+    position: Position,
+    range: {
+      startLine: number;
+      startChar: number;
+      endLine: number;
+      endChar: number;
+    }
+  ): boolean {
+    if (position.line < range.startLine || position.line > range.endLine) {
+      return false;
+    }
+    if (
+      position.line === range.startLine &&
+      position.character < range.startChar
+    ) {
+      return false;
+    }
+    if (position.line === range.endLine && position.character > range.endChar) {
+      return false;
+    }
+    return true;
   }
 }

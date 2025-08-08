@@ -15,6 +15,9 @@
     "categories": [
         "Other"
     ],
+    "activationEvents": [
+        "onLanguage:lookml"
+    ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
@@ -66,104 +69,6 @@
             {
                 "language": "lookml",
                 "path": "./snippets/snippets.json"
-            }
-        ],
-        "semanticTokenTypes": [
-            {
-                "id": "dimension",
-                "superType": "variable",
-                "description": "A LookML dimension field"
-            },
-            {
-                "id": "measure",
-                "superType": "function",
-                "description": "A LookML measure field"
-            },
-            {
-                "id": "filter",
-                "superType": "variable",
-                "description": "A LookML filter field"
-            },
-            {
-                "id": "dimensionGroup",
-                "superType": "variable",
-                "description": "A LookML dimension group field"
-            },
-            {
-                "id": "join",
-                "superType": "class",
-                "description": "A LookML join declaration"
-            },
-            {
-                "id": "view",
-                "superType": "class",
-                "description": "A LookML view declaration"
-            },
-            {
-                "id": "explore",
-                "superType": "class",
-                "description": "A LookML explore declaration"
-            },
-            {
-                "id": "model",
-                "superType": "class",
-                "description": "A LookML model declaration"
-            },
-            {
-                "id": "fieldReference",
-                "superType": "variable",
-                "description": "A reference to another LookML field"
-            },
-            {
-                "id": "sqlExpression",
-                "superType": "string",
-                "description": "A SQL expression in LookML"
-            }
-        ],
-        "semanticTokenModifiers": [
-            {
-                "id": "declaration",
-                "description": "A symbol being declared"
-            },
-            {
-                "id": "definition",
-                "description": "A symbol being defined"
-            }
-        ],
-        "semanticTokenScopes": [
-            {
-                "scopes": {
-                    "dimension": [
-                        "entity.name.type.dimension.lookml"
-                    ],
-                    "measure": [
-                        "entity.name.type.measure.lookml"
-                    ],
-                    "filter": [
-                        "entity.name.type.filter.lookml"
-                    ],
-                    "dimensionGroup": [
-                        "entity.name.type.dimension-group.lookml"
-                    ],
-                    "join": [
-                        "entity.name.type.join.lookml"
-                    ],
-                    "view": [
-                        "entity.name.type.view.lookml"
-                    ],
-                    "explore": [
-                        "entity.name.type.explore.lookml"
-                    ],
-                    "model": [
-                        "entity.name.type.model.lookml"
-                    ],
-                    "fieldReference": [
-                        "variable.other.field-reference.lookml"
-                    ],
-                    "sqlExpression": [
-                        "meta.embedded.block.sql"
-                    ]
-                }
             }
         ]
     },

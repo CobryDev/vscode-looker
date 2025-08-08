@@ -15,7 +15,19 @@ import {
 } from "vscode-languageserver/node";
 
 import { LookMLWorkspace } from "./workspace";
-import { ViewNode, ExploreNode } from "../workspace-tools/ast-types";
+import {
+  AnyASTNode,
+  ExploreNode,
+  JoinNode,
+  LookMLFile,
+  ViewNode,
+  DimensionNode,
+  MeasureNode,
+  FilterNode,
+  ParameterNode,
+  DimensionGroupNode,
+  Position as ASTPosition,
+} from "../workspace-tools/ast-types";
 
 /**
  * Context information for determining appropriate completions
@@ -57,7 +69,7 @@ export class LookMLCompletionProvider {
       return [];
     }
 
-    const context = this.analyzeContext(document.content, position);
+    const context = this.analyzeContext(document, position);
     return this.getCompletionsForContext(context);
   }
 
@@ -73,10 +85,10 @@ export class LookMLCompletionProvider {
    * Analyze the context at the current position
    */
   private analyzeContext(
-    content: string,
+    document: { content: string; ast?: LookMLFile },
     position: Position
   ): CompletionContext {
-    const lines = content.split("\n");
+    const lines = document.content.split("\n");
     const currentLine = lines[position.line] || "";
     const lineText = currentLine.substring(0, position.character);
 
@@ -85,56 +97,221 @@ export class LookMLCompletionProvider {
       position,
     };
 
-    // Analyze the AST structure to determine context
-    const beforeText = lines.slice(0, position.line + 1).join("\n");
+    // Prefer precise AST lookup when available
+    const ast = document.ast;
+    if (ast) {
+      const node = this.findDeepestNodeAtPosition(
+        ast,
+        position.line,
+        position.character
+      );
 
-    // Simple pattern matching for context detection
-    // This could be enhanced with proper AST traversal
-    const viewMatch = beforeText.match(/view:\s*(\w+)\s*{[^}]*$/);
-    if (viewMatch) {
-      context.inView = true;
-      context.viewName = viewMatch[1];
-    }
-
-    const exploreMatch = beforeText.match(/explore:\s*(\w+)\s*{[^}]*$/);
-    if (exploreMatch) {
-      context.inExplore = true;
-      context.exploreName = exploreMatch[1];
-    }
-
-    // Check if we're inside a field definition
-    if (
-      lineText.includes("dimension:") ||
-      beforeText.match(/dimension:\s*\w+\s*{[^}]*$/)
-    ) {
-      context.inDimension = true;
-    }
-    if (
-      lineText.includes("measure:") ||
-      beforeText.match(/measure:\s*\w+\s*{[^}]*$/)
-    ) {
-      context.inMeasure = true;
-    }
-    if (
-      lineText.includes("filter:") ||
-      beforeText.match(/filter:\s*\w+\s*{[^}]*$/)
-    ) {
-      context.inFilter = true;
-    }
-    if (
-      lineText.includes("parameter:") ||
-      beforeText.match(/parameter:\s*\w+\s*{[^}]*$/)
-    ) {
-      context.inParameter = true;
-    }
-    if (
-      lineText.includes("join:") ||
-      beforeText.match(/join:\s*\w+\s*{[^}]*$/)
-    ) {
-      context.inJoin = true;
+      if (node) {
+        // Map node hierarchy to context flags
+        // Walk up via helper capturing container view/explore if any
+        const mapping = this.mapNodeToContext(node, ast);
+        Object.assign(context, mapping);
+        return context;
+      }
     }
 
+    // Fallback (should rarely be needed): minimal, line-based hints
     return context;
+  }
+
+  private findDeepestNodeAtPosition(
+    file: LookMLFile,
+    line: number,
+    character: number
+  ): AnyASTNode | null {
+    const contains = (pos: ASTPosition): boolean => {
+      if (line < pos.startLine || line > pos.endLine) return false;
+      if (line === pos.startLine && character < pos.startChar) return false;
+      if (line === pos.endLine && character > pos.endChar) return false;
+      return true;
+    };
+
+    let best: AnyASTNode | null = null;
+    const consider = (node: AnyASTNode) => {
+      if (!contains((node as any).position)) return;
+      // Prefer the smallest range that still contains the point
+      if (
+        !best ||
+        this.rangeIsInside((node as any).position, (best as any).position)
+      ) {
+        best = node;
+      }
+    };
+
+    // Views and their children
+    for (const view of Object.values(file.views)) {
+      consider(view as AnyASTNode);
+      // Children
+      for (const dim of Object.values(view.dimensions))
+        consider(dim as AnyASTNode);
+      for (const mea of Object.values(view.measures))
+        consider(mea as AnyASTNode);
+      for (const fil of Object.values(view.filters))
+        consider(fil as AnyASTNode);
+      for (const par of Object.values(view.parameterNodes))
+        consider(par as AnyASTNode);
+      for (const grp of Object.values(view.dimensionGroups))
+        consider(grp as AnyASTNode);
+      if (view.derivedTable) consider(view.derivedTable as AnyASTNode);
+    }
+
+    // Explores and children
+    for (const explore of Object.values(file.explores)) {
+      consider(explore as AnyASTNode);
+      for (const join of Object.values(explore.joins))
+        consider(join as AnyASTNode);
+    }
+
+    // Models and their explores
+    for (const model of Object.values(file.models)) {
+      consider(model as AnyASTNode);
+      for (const ex of Object.values(model.explores))
+        consider(ex as AnyASTNode);
+    }
+
+    // Dashboards (elements/filters are placeholders currently)
+    for (const dash of Object.values(file.dashboards)) {
+      consider(dash as AnyASTNode);
+    }
+
+    return best;
+  }
+
+  private rangeIsInside(inner: ASTPosition, outer: ASTPosition): boolean {
+    if (inner.startLine < outer.startLine) return false;
+    if (inner.endLine > outer.endLine) return false;
+    if (
+      inner.startLine === outer.startLine &&
+      inner.startChar < outer.startChar
+    )
+      return false;
+    if (inner.endLine === outer.endLine && inner.endChar > outer.endChar)
+      return false;
+    return true;
+  }
+
+  private mapNodeToContext(
+    node: AnyASTNode,
+    file: LookMLFile
+  ): Partial<CompletionContext> {
+    const flags: Partial<CompletionContext> = {};
+
+    const assignViewContext = (view: ViewNode) => {
+      flags.inView = true;
+      flags.viewName = view.name;
+    };
+    const assignExploreContext = (explore: ExploreNode) => {
+      flags.inExplore = true;
+      flags.exploreName = explore.name;
+    };
+
+    // Try to use semantic symbol parent links first if available
+    const model = this.workspace.semanticModel;
+    const symbolForNode = model.nodeToSymbol.get(node);
+    if (symbolForNode?.parent) {
+      if (symbolForNode.parent.type === "view") {
+        assignViewContext(symbolForNode.parent.declaration.node as ViewNode);
+      }
+      if (symbolForNode.parent.type === "explore") {
+        assignExploreContext(
+          symbolForNode.parent.declaration.node as ExploreNode
+        );
+      }
+    }
+
+    switch ((node as any).type) {
+      case "view":
+        assignViewContext(node as ViewNode);
+        break;
+      case "dimension":
+        flags.inDimension = true;
+        if (!flags.inView)
+          this.findContainerView(
+            node as DimensionNode,
+            file,
+            assignViewContext
+          );
+        break;
+      case "measure":
+        flags.inMeasure = true;
+        if (!flags.inView)
+          this.findContainerView(node as MeasureNode, file, assignViewContext);
+        break;
+      case "filter":
+        flags.inFilter = true;
+        if (!flags.inView)
+          this.findContainerView(node as FilterNode, file, assignViewContext);
+        break;
+      case "parameter":
+        flags.inParameter = true;
+        if (!flags.inView)
+          this.findContainerView(
+            node as ParameterNode,
+            file,
+            assignViewContext
+          );
+        break;
+      case "dimension_group":
+        // Treat like a field inside a view for completion purposes
+        if (!flags.inView)
+          this.findContainerView(
+            node as DimensionGroupNode,
+            file,
+            assignViewContext
+          );
+        break;
+      case "explore":
+        assignExploreContext(node as ExploreNode);
+        break;
+      case "join":
+        flags.inJoin = true;
+        if (!flags.inExplore)
+          this.findContainerExplore(
+            node as JoinNode,
+            file,
+            assignExploreContext
+          );
+        break;
+      default:
+        break;
+    }
+
+    return flags;
+  }
+
+  private findContainerView(
+    child: AnyASTNode,
+    file: LookMLFile,
+    onFound: (view: ViewNode) => void
+  ): void {
+    for (const view of Object.values(file.views)) {
+      const pos = (view as any).position as ASTPosition;
+      const cpos = (child as any).position as ASTPosition;
+      if (this.rangeIsInside(cpos, pos)) {
+        onFound(view);
+        return;
+      }
+    }
+  }
+
+  private findContainerExplore(
+    child: AnyASTNode,
+    file: LookMLFile,
+    onFound: (explore: ExploreNode) => void
+  ): void {
+    for (const explore of Object.values(file.explores)) {
+      const pos = (explore as any).position as ASTPosition;
+      const cpos = (child as any).position as ASTPosition;
+      if (this.rangeIsInside(cpos, pos)) {
+        onFound(explore);
+        return;
+      }
+    }
   }
 
   /**
@@ -327,12 +504,15 @@ export class LookMLCompletionProvider {
     ];
 
     // Add available views as join targets
-    const views = this.workspace.getAllViews();
-    for (const view of views) {
+    // Use semantic model for views
+    const modelViews = Array.from(
+      this.workspace.semanticModel.symbols.values()
+    ).filter((s) => s.type === "view");
+    for (const view of modelViews) {
       completions.push({
         label: view.name,
         kind: CompletionItemKind.Reference,
-        detail: `View from ${view.fileName}`,
+        detail: `View`,
         documentation: this.createMarkdown(`Reference to view '${view.name}'`),
         insertText: view.name,
       });
@@ -542,25 +722,29 @@ export class LookMLCompletionProvider {
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    // Add view references
-    const views = this.workspace.getAllViews();
-    for (const view of views) {
+    // Add view references from semantic model
+    const modelViews = Array.from(
+      this.workspace.semanticModel.symbols.values()
+    ).filter((s) => s.type === "view");
+    for (const view of modelViews) {
       completions.push({
         label: view.name,
         kind: CompletionItemKind.Reference,
-        detail: `View from ${view.fileName}`,
+        detail: `View`,
         documentation: this.createMarkdown(`Reference to view '${view.name}'`),
         insertText: view.name,
       });
     }
 
     // Add explore references
-    const explores = this.workspace.getAllExplores();
-    for (const explore of explores) {
+    const modelExplores = Array.from(
+      this.workspace.semanticModel.symbols.values()
+    ).filter((s) => s.type === "explore");
+    for (const explore of modelExplores) {
       completions.push({
         label: explore.name,
         kind: CompletionItemKind.Reference,
-        detail: `Explore from ${explore.fileName}`,
+        detail: `Explore`,
         documentation: this.createMarkdown(
           `Reference to explore '${explore.name}'`
         ),

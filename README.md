@@ -9,6 +9,7 @@ A Visual Studio Code extension designed to enhance the development experience fo
 ## Table of Contents
 
 - [Features](#features)
+- [Architecture](#architecture)
 - [Installation & Setup](#installation--setup)
 - [Project Status](#project-status)
 - [Development & Testing](#development--testing)
@@ -19,12 +20,13 @@ A Visual Studio Code extension designed to enhance the development experience fo
 
 ### Current Features
 
-- Syntax highlighting with embedded SQL
+- **Advanced Syntax Highlighting**: Two-layer highlighting system with fast TextMate grammar and intelligent semantic analysis
+- **Embedded SQL Support**: Full SQL syntax highlighting within LookML blocks
+- **Context-Aware Auto-completion**: Intelligent suggestions for views, fields, and LookML constructs
+- **Workspace Intelligence**: AST-based parsing for accurate field and view reference resolution
+- **Looker API Integration**: Secure credential storage and API connectivity
 
 ![](https://raw.githubusercontent.com/Ladvien/vscode-looker/master/docs/lookml-example.png)
-
-- Storing and retrieval of Looker API credentials.
-- Auto suggest view and field name lookups.
 
 ![Image](./docs/vscode-looker-auto-complete.gif)
 
@@ -77,6 +79,29 @@ filter: name {
 - Alphabetize `include:` statements.
 - Auto include view files needed.
 
+## Architecture
+
+This extension implements a sophisticated two-layer highlighting system for optimal LookML development experience:
+
+### Layer 1: Fast TextMate Grammar
+
+- **Purpose**: Provides immediate, basic syntax highlighting as you type
+- **Scope**: Handles fundamental tokens like comments, strings, SQL blocks, and liquid variables
+- **Performance**: Extremely fast, regex-based pattern matching
+- **Reliability**: Only highlights unambiguous tokens with high confidence
+
+### Layer 2: Intelligent Language Server
+
+- **Purpose**: Delivers advanced, context-aware semantic highlighting and language features
+- **Technology**: AST-based parsing with full LookML language understanding
+- **Capabilities**:
+  - Context-aware keyword highlighting (distinguishes `dimension` as a keyword vs. field name)
+  - Intelligent auto-completion with workspace awareness
+  - Accurate field and view reference resolution
+  - Semantic token classification for precise highlighting
+
+This architecture ensures you get instant visual feedback while typing, followed by rich, accurate highlighting and language features as the Language Server processes your code. The result is a responsive, robust development experience that scales with complex LookML projects.
+
 ## Installation & Setup
 
 ### Requirements
@@ -91,9 +116,9 @@ filter: name {
 
 **Note**: This project was originally created by GitHub user [Ladvien](https://github.com/Ladvien). We have now forked this project and are actively working to improve it.
 
-While the original project's LookML grammar implementation faced challenges and was not fully functional, we are committed to enhancing this extension to better serve the LookML development community. The core challenge remains the LookML language grammar implementation, which requires [TextMate](https://macromates.com/manual/en/language_grammars) grammar definition using regex in a VSCode-compatible format.
+We have significantly improved the extension's architecture and LookML language support. The extension now features a sophisticated two-layer highlighting system that provides both fast initial highlighting and advanced context-aware semantic analysis.
 
-We welcome contributions from the community, especially from developers with experience in TextMate grammars, regex, and VSCode extension development, to help improve the LookML language support.
+We welcome contributions from the community to help enhance LookML tooling and developer experience.
 
 ## Development & Testing
 

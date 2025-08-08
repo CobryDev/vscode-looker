@@ -33,18 +33,23 @@ export class LookMLHoverProvider {
       return null;
     }
 
-    // Get the symbol at the current position
-    const symbol = this.workspace.getSymbolAt(
-      uri,
-      position.line,
-      position.character
+    // Use pre-analyzed model to find symbol at position
+    const symbolsInFile = this.workspace.semanticModel.symbolsByUri.get(uri);
+    const symbol = symbolsInFile?.find((s) =>
+      this.isPositionInRange(position, s.declaration.position)
     );
-    if (!symbol) {
-      return null;
-    }
+    if (!symbol) return null;
 
-    // Generate hover content based on symbol type
-    const hoverContent = this.generateHoverContent(symbol);
+    const hoverContent = this.generateHoverContent({
+      type: symbol.type,
+      name: symbol.name,
+      node: symbol.declaration.node,
+      fileName: document.fileName,
+      startLine: symbol.declaration.position.startLine,
+      startChar: symbol.declaration.position.startChar,
+      endLine: symbol.declaration.position.endLine,
+      endChar: symbol.declaration.position.endChar,
+    });
     if (!hoverContent) {
       return null;
     }
@@ -55,10 +60,40 @@ export class LookMLHoverProvider {
         value: hoverContent,
       },
       range: {
-        start: { line: symbol.startLine, character: symbol.startChar },
-        end: { line: symbol.endLine, character: symbol.endChar },
+        start: {
+          line: symbol.declaration.position.startLine,
+          character: symbol.declaration.position.startChar,
+        },
+        end: {
+          line: symbol.declaration.position.endLine,
+          character: symbol.declaration.position.endChar,
+        },
       },
     };
+  }
+
+  private isPositionInRange(
+    position: Position,
+    range: {
+      startLine: number;
+      startChar: number;
+      endLine: number;
+      endChar: number;
+    }
+  ): boolean {
+    if (position.line < range.startLine || position.line > range.endLine) {
+      return false;
+    }
+    if (
+      position.line === range.startLine &&
+      position.character < range.startChar
+    ) {
+      return false;
+    }
+    if (position.line === range.endLine && position.character > range.endChar) {
+      return false;
+    }
+    return true;
   }
 
   /**

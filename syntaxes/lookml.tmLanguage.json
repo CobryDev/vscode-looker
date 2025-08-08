@@ -14,7 +14,16 @@
 					"include": "#comments"
 				},
 				{
-					"include": "#blocks"
+					"include": "#strings"
+				},
+				{
+					"include": "#sql_block"
+				},
+				{
+					"include": "#sql_terminator"
+				},
+				{
+					"include": "#substitution"
 				}
 			]
 		},
@@ -72,21 +81,6 @@
 			"match": ";;",
 			"comment": "Matches the double semicolon terminator."
 		},
-		"lookml_keywords": {
-			"name": "keyword.control.lookml",
-			"match": "\\b(view|measure|dimension|dimension_group|filter|parameter|derived_table|explore|join)\\b",
-			"comment": "Top-level block keywords."
-		},
-		"parameter_keywords": {
-			"name": "keyword.other.lookml",
-			"match": "\\b(type|label|group_label|group_item_label|description|sql|sql_on|primary_key|hidden|timeframes|drill_fields|value_format|value_format_name|html|link|url|icon_url|sql_table_name|indexes|map_layer_name|sql_latitude|sql_longitude):",
-			"comment": "Common parameter keywords, including nested ones, identified by the trailing colon."
-		},
-		"lookml_values": {
-			"name": "support.constant.lookml",
-			"match": "\\b(yes|no|string|number|time|location|count|average|sum|count_distinct)\\b",
-			"comment": "Common predefined values for parameters like 'type' or 'hidden'."
-		},
 		"sql_block": {
 			"name": "meta.embedded.block.sql.lookml",
 			"comment": "This scope allows VS Code to inject SQL grammar.",
@@ -103,53 +97,6 @@
 				},
 				{
 					"include": "source.sql"
-				}
-			]
-		},
-		"block_content": {
-			"comment": "Patterns that can exist inside any LookML block.",
-			"patterns": [
-				{
-					"include": "#comments"
-				},
-				{
-					"include": "#strings"
-				},
-				{
-					"include": "#parameter_keywords"
-				},
-				{
-					"include": "#lookml_values"
-				},
-				{
-					"include": "#sql_block"
-				},
-				{
-					"include": "#sql_terminator"
-				},
-				{
-					"include": "#substitution"
-				},
-				{
-					"include": "#blocks"
-				}
-			]
-		},
-		"blocks": {
-			"comment": "Defines a generic LookML block with balanced braces.",
-			"begin": "(\\w+):(?:\\s*(\\w+))?\\s*\\{",
-			"beginCaptures": {
-				"1": {
-					"name": "keyword.control.lookml"
-				},
-				"2": {
-					"name": "entity.name.function.lookml"
-				}
-			},
-			"end": "\\}",
-			"patterns": [
-				{
-					"include": "#block_content"
 				}
 			]
 		}

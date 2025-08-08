@@ -85,6 +85,20 @@ connection.onInitialize((params: InitializeParams) => {
     capabilities.textDocument.publishDiagnostics.relatedInformation
   );
 
+  connection.console.log(
+    `[DEBUG] Client supports semantic tokens: ${!!capabilities.textDocument
+      ?.semanticTokens}`
+  );
+  if (capabilities.textDocument?.semanticTokens) {
+    connection.console.log(
+      `[DEBUG] Semantic token capabilities: ${JSON.stringify(
+        capabilities.textDocument.semanticTokens,
+        null,
+        2
+      )}`
+    );
+  }
+
   // Initialize workspace
   const workspaceUri = params.workspaceFolders?.[0]?.uri || params.rootUri;
   workspace = new LookMLWorkspace(
@@ -98,6 +112,12 @@ connection.onInitialize((params: InitializeParams) => {
   hoverProvider = new LookMLHoverProvider(workspace);
   referenceProvider = new LookMLReferenceProvider(workspace);
   semanticTokensProvider = new LookMLSemanticTokensProvider(workspace);
+
+  connection.console.log(`[SERVER] Semantic tokens provider initialized`);
+  const legend = createSemanticTokensLegend();
+  connection.console.log(
+    `[SERVER] Semantic tokens legend: ${legend.tokenTypes.length} types, ${legend.tokenModifiers.length} modifiers`
+  );
 
   const result: InitializeResult = {
     capabilities: {
@@ -121,7 +141,7 @@ connection.onInitialize((params: InitializeParams) => {
       // Support semantic tokens
       semanticTokensProvider: {
         legend: createSemanticTokensLegend(),
-        range: false,
+        range: true,
         full: {
           delta: false,
         },
@@ -187,8 +207,12 @@ documents.onDidChangeContent((change) => {
 });
 
 documents.onDidOpen((event) => {
+  connection.console.log(`[DEBUG] Document opened: ${event.document.uri}`);
   workspace.updateDocument(event.document.uri, event.document.getText());
   validateTextDocument(event.document);
+  connection.console.log(
+    `[DEBUG] Document processed and validated: ${event.document.uri}`
+  );
 });
 
 documents.onDidSave((event) => {
@@ -310,9 +334,15 @@ connection.onReferences(
  */
 connection.languages.semanticTokens.on(
   async (params: SemanticTokensParams): Promise<SemanticTokens> => {
+    connection.console.log(
+      `[SERVER] Semantic tokens requested for: ${params.textDocument.uri}`
+    );
     try {
       const result = await semanticTokensProvider.getSemanticTokens(
         params.textDocument.uri
+      );
+      connection.console.log(
+        `[SERVER] Semantic tokens result: ${result.data.length / 5} tokens`
       );
       if (result) {
         return result;
@@ -322,6 +352,33 @@ connection.languages.semanticTokens.on(
     } catch (error) {
       connection.console.error(`Error providing semantic tokens: ${error}`);
       // Return empty semantic tokens on error
+      return { data: [] };
+    }
+  }
+);
+
+/**
+ * Handle semantic tokens range requests
+ */
+connection.languages.semanticTokens.onRange(
+  async (params): Promise<SemanticTokens> => {
+    connection.console.log(
+      `[SERVER] Range semantic tokens requested for: ${params.textDocument.uri}`
+    );
+    try {
+      const result = await semanticTokensProvider.getSemanticTokens(
+        params.textDocument.uri
+      );
+      connection.console.log(
+        `[SERVER] Range semantic tokens result: ${
+          result.data.length / 5
+        } tokens`
+      );
+      return result;
+    } catch (error) {
+      connection.console.error(
+        `Error providing range semantic tokens: ${error}`
+      );
       return { data: [] };
     }
   }
